@@ -31,6 +31,7 @@ class AlexnetGAP(object):
                image_mean):
     self.num_classes = num_classes
     self.image_mean = tf.reshape(tf.constant(image_mean), [1,1,1,3])
+    self.l2_reg = 0.001
 
     # placeholders
     with tf.name_scope("Placeholders"):
@@ -67,7 +68,7 @@ class AlexnetGAP(object):
                            stride=4, 
                            padding='VALID', 
                            is_training=self.is_training,
-                           regularizer=None)
+                           regularizer=tf.contrib.layers.l2_regularizer(scale=self.l2_reg))
       # x: [batch, 55, 55, 96]
 
       x = tf.nn.max_pool(x,
@@ -87,7 +88,7 @@ class AlexnetGAP(object):
                            stride=1, 
                            padding='SAME', 
                            is_training=self.is_training,
-                           regularizer=None)
+                           regularizer=tf.contrib.layers.l2_regularizer(scale=self.l2_reg))
       # x: [batch, 27, 27, 256]
 
       x = tf.nn.max_pool(x,
@@ -108,7 +109,7 @@ class AlexnetGAP(object):
                            stride=1,
                            padding='SAME', 
                            is_training=self.is_training,
-                           regularizer=None)
+                           regularizer=tf.contrib.layers.l2_regularizer(scale=self.l2_reg))
       # x: [batch, 13, 13, 384]
     with tf.variable_scope('conv_4'):
       x = net.conv_relu_bn(x, 
@@ -117,7 +118,7 @@ class AlexnetGAP(object):
                            stride=1,
                            padding='SAME', 
                            is_training=self.is_training,
-                           regularizer=None)
+                           regularizer=tf.contrib.layers.l2_regularizer(scale=self.l2_reg))
       # x: [batch, 13, 13, 384]
     with tf.variable_scope('conv_5'):
       x = net.conv_relu_bn(x, 
@@ -126,7 +127,7 @@ class AlexnetGAP(object):
                            stride=1,
                            padding='SAME', 
                            is_training=self.is_training,
-                           regularizer=None)
+                           regularizer=tf.contrib.layers.l2_regularizer(scale=self.l2_reg))
       # x: [batch, 13, 13, 384]
     
     ### additional conv layer
@@ -137,7 +138,7 @@ class AlexnetGAP(object):
                            stride=1,
                            padding='SAME', 
                            is_training=self.is_training,
-                           regularizer=None)
+                           regularizer=tf.contrib.layers.l2_regularizer(scale=self.l2_reg))
       # x: [batch, 13, 13, 512]
       # summaries.append( tf.summary.histogram('conv_6', x) )
 
@@ -154,22 +155,23 @@ class AlexnetGAP(object):
       num_feature = x.get_shape().as_list()[-1]
       weights = tf.get_variable("weights",
                   shape=[num_feature, self.num_classes],
-                  initializer=tf.contrib.layers.xavier_initializer())
+                  initializer=tf.contrib.layers.xavier_initializer(),
+                  regularizer=tf.contrib.layers.l2_regularizer(scale=self.l2_reg))
 
       self.logits = tf.matmul(x, weights)
       # logits: [batch, num_classes]
 
     ### training, loss, ...
     with tf.variable_scope('etc'):
-      softmax_loss = tf.reduce_mean(tf.nn.sparse_softmax_cross_entropy_with_logits(labels=self.labels, logits=self.logits))
-      softmax_loss = tf.cast(softmax_loss, tf.float64)
-      summaries.append(tf.summary.scalar('cross_loss', softmax_loss))
+      self.softmax_loss = tf.reduce_mean(tf.nn.sparse_softmax_cross_entropy_with_logits(labels=self.labels, logits=self.logits))
+      self.softmax_loss = tf.cast(self.softmax_loss, tf.float64)
+      summaries.append(tf.summary.scalar('cross_loss', self.softmax_loss))
 
       reg_loss = tf.reduce_sum(tf.get_collection(tf.GraphKeys.REGULARIZATION_LOSSES))
       reg_loss = tf.cast(reg_loss, tf.float64)
       summaries.append(tf.summary.scalar('reg_loss', reg_loss))
 
-      self.loss_op = softmax_loss + reg_loss
+      self.loss_op = self.softmax_loss + reg_loss
       summaries.append(tf.summary.scalar('total_loss', self.loss_op))
 
       optimizer = tf.train.MomentumOptimizer( self.learning_rate, 0.9 )
@@ -203,7 +205,7 @@ class AlexnetGAP(object):
 
   def inference_with_labels(self, sess, data, labels):
     loss, scores, pred = sess.run(
-      [self.loss_op, self.score_op, self.pred_op], 
+      [self.softmax_loss, self.score_op, self.pred_op], 
       feed_dict={
         self.inputs: data,
         self.labels: labels,
