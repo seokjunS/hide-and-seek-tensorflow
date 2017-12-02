@@ -11,6 +11,7 @@ from sklearn.metrics import accuracy_score
 from env import *
 from dataset import Dataset
 from alexnet_gap import *
+from googlenet_gap import *
 
 
 """
@@ -82,7 +83,7 @@ def arg_parse(args):
   parser.add_argument(
       '--method',
       type=str,
-      default='AlexnetGAP',
+      default='GooglenetGAP',
       help='Path to write log, checkpoint, and summary files.'
   )
 
@@ -173,6 +174,9 @@ def get_model(FLAGS):
   if FLAGS.method == 'AlexnetGAP':
     model = AlexnetGAP(num_classes=NUM_CLASSES,
                        image_mean=MEAN_IMAGE_RGB)
+  elif FLAGS.method == 'GooglenetGAP':
+    model = GooglenetGAP(num_classes=NUM_CLASSES,
+                         image_mean=MEAN_IMAGE_RGB)
   else:
     model = None
 

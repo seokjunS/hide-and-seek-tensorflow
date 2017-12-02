@@ -50,7 +50,7 @@ class AlexnetGAP(object):
     summaries = []
 
     ### resize image
-    x = tf.image.resize_images(self.inputs, size=[RESIZE_IMAGE_WIDTH, RESIZE_IMAGE_HEIGHT])
+    x = tf.image.resize_images(self.inputs, size=[ALEXNET_IMAGE_WIDTH, ALEXNET_IMAGE_HEIGHT])
     # x: [batch, 227, 227, 3]
 
     ### normalize image
