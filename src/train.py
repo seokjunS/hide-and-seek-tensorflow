@@ -22,7 +22,7 @@ def arg_parse(args):
   parser.add_argument(
       '--learning_rate',
       type=float,
-      default=0.001,
+      default=0.01,
       help='Initial learning rate.'
   )
   parser.add_argument(
@@ -187,6 +187,7 @@ def validation(model, sess, dataset):
   preds = []
   scores = []
 
+  num_data = 0
 
   for data, label, _ in dataset.iter_batch(sess):
     try:
@@ -196,6 +197,7 @@ def validation(model, sess, dataset):
 
     samples = data.shape[0]
 
+    num_data += samples
     total_loss += loss*samples
 
     labels.extend( label )
@@ -286,19 +288,25 @@ def main(sys_argv):
           writer.add_summary(valid_summary, step)
 
           ### rate decaying check
-          need_decay = monitor.need_decay(loss)
-
-          if need_decay:
-            new_lr = learning_rate * 0.5
-
-            if new_lr < FLAGS.min_learning_rate:
-              logging("[%s: INFO] STOP! at %d. LR: %.f" % 
-                (datetime.now(), cnt_epoch, learning_rate), FLAGS)
-              break
-            else:
-              logging("[%s: INFO] LR decay at %d. %.f =>  %.f" % 
+          # gradually decaying
+          new_lr = (FLAGS.learning_rate - FLAGS.min_learning_rate) * (1 - cnt_epoch/(FLAGS.max_epoch+1)) + FLAGS.min_learning_rate
+          logging("[%s: INFO] LR decay at %d. %.f =>  %.f" % 
                 (datetime.now(), cnt_epoch, learning_rate, new_lr), FLAGS)
-              learning_rate = new_lr
+          learning_rate = new_lr
+
+          # need_decay = monitor.need_decay(loss)
+
+          # if need_decay:
+          #   new_lr = learning_rate * 0.1
+
+          #   if new_lr < FLAGS.min_learning_rate:
+          #     logging("[%s: INFO] STOP! at %d. LR: %.f" % 
+          #       (datetime.now(), cnt_epoch, learning_rate), FLAGS)
+          #     break
+          #   else:
+          #     logging("[%s: INFO] LR decay at %d. %.f =>  %.f" % 
+          #       (datetime.now(), cnt_epoch, learning_rate, new_lr), FLAGS)
+          #     learning_rate = new_lr
             
 
 

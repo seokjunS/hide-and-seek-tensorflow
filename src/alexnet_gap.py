@@ -54,6 +54,7 @@ class AlexnetGAP(object):
 
     ### normalize image
     x = tf.subtract(x, self.image_mean)
+    summaries.append( tf.summary.histogram('norm_image', x) )
 
 
     ### CONV1
@@ -137,13 +138,16 @@ class AlexnetGAP(object):
                            padding='SAME', 
                            is_training=self.is_training,
                            regularizer=None)
-      # x: [batch, 13, 13, 512]  
+      # x: [batch, 13, 13, 512]
+      summaries.append( tf.summary.histogram('conv_6', x) )
 
     ### GAP
     # [batch, 13, 13, 512] => [batch, 512]
     with tf.variable_scope('gap'):
-      x = tf.reduce_sum(x, axis=[1, 2])
+      # x = tf.reduce_sum(x, axis=[1, 2])
+      x = tf.reduce_mean(x, axis=[1, 2])
       # x: [batch, 512]
+      summaries.append( tf.summary.histogram('gap', x) )
 
     ### softmax without bias
     with tf.variable_scope('softmax'):
@@ -168,8 +172,8 @@ class AlexnetGAP(object):
       self.loss_op = softmax_loss + reg_loss
       summaries.append(tf.summary.scalar('total_loss', self.loss_op))
 
-      # optimizer = tf.train.MomentumOptimizer( self.learning_rate, 0.9 )
-      optimizer = tf.train.AdamOptimizer( self.learning_rate )
+      optimizer = tf.train.MomentumOptimizer( self.learning_rate, 0.9 )
+      # optimizer = tf.train.AdamOptimizer( self.learning_rate )
       self.train_op = optimizer.minimize( self.loss_op )
 
       self.score_op = tf.nn.softmax(self.logits)
