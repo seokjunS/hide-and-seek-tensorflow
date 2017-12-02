@@ -54,7 +54,7 @@ class AlexnetGAP(object):
 
     ### normalize image
     x = tf.subtract(x, self.image_mean)
-    summaries.append( tf.summary.histogram('norm_image', x) )
+    # summaries.append( tf.summary.histogram('norm_image', x) )
 
 
     ### CONV1
@@ -139,7 +139,7 @@ class AlexnetGAP(object):
                            is_training=self.is_training,
                            regularizer=None)
       # x: [batch, 13, 13, 512]
-      summaries.append( tf.summary.histogram('conv_6', x) )
+      # summaries.append( tf.summary.histogram('conv_6', x) )
 
     ### GAP
     # [batch, 13, 13, 512] => [batch, 512]
@@ -147,7 +147,7 @@ class AlexnetGAP(object):
       # x = tf.reduce_sum(x, axis=[1, 2])
       x = tf.reduce_mean(x, axis=[1, 2])
       # x: [batch, 512]
-      summaries.append( tf.summary.histogram('gap', x) )
+      # summaries.append( tf.summary.histogram('gap', x) )
 
     ### softmax without bias
     with tf.variable_scope('softmax'):
