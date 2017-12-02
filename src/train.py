@@ -206,7 +206,6 @@ def validation(model, sess, dataset):
     
 
   accuracy = accuracy_score(labels, preds)
-  num_data = len(labels)
 
   return total_loss/num_data, accuracy
 
@@ -231,7 +230,7 @@ def main(sys_argv):
 
   with tf.Graph().as_default():
     ### get dataset
-    train_set = Dataset(FLAGS.train_file,
+    train_set = Dataset(FLAGS.valid_file,
                           batch_size=FLAGS.batch_size,
                           max_epoch=FLAGS.max_epoch,
                           for_training=True)
@@ -289,8 +288,8 @@ def main(sys_argv):
 
           ### rate decaying check
           # gradually decaying
-          new_lr = (FLAGS.learning_rate - FLAGS.min_learning_rate) * (1 - cnt_epoch/(FLAGS.max_epoch+1)) + FLAGS.min_learning_rate
-          logging("[%s: INFO] LR decay at %d. %.f =>  %.f" % 
+          new_lr = (FLAGS.learning_rate - FLAGS.min_learning_rate) * (1 - cnt_epoch/(FLAGS.max_epoch+1.0)) + FLAGS.min_learning_rate
+          logging("[%s: INFO] LR decay at %d. %f =>  %f" % 
                 (datetime.now(), cnt_epoch, learning_rate, new_lr), FLAGS)
           learning_rate = new_lr
 
