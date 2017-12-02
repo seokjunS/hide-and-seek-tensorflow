@@ -40,7 +40,76 @@ def conv_relu_bn(inputs, filter_shape, num_filters, stride, padding, is_training
   return relu_bn(_conv, is_training)
 
 
+def inception(inputs,
+              num_1x1,
+              num_3x3_reduce,
+              num_3x3,
+              num_5x5_reduce,
+              num_5x5,
+              num_proj):
 
+  with tf.variable_scope('inc_0_1x1'):
+    act0 = conv_relu_bn(inputs, 
+                        filter_shape=[1,1], 
+                        num_filters=num_1x1, 
+                        stride=1,
+                        padding='SAME', 
+                        is_training=is_training,
+                        regularizer=regularizer)
+
+  with tf.variable_scope('inc_1_3x3'):
+    with tf.variable_scope('reduce'):
+      act1 = conv_relu_bn(inputs, 
+                          filter_shape=[1,1], 
+                          num_filters=num_3x3_reduce, 
+                          stride=1,
+                          padding='SAME', 
+                          is_training=is_training,
+                          regularizer=regularizer)
+    with tf.variable_scope('conv'):
+      act1 = conv_relu_bn(act1, 
+                          filter_shape=[3,3], 
+                          num_filters=num_3x3, 
+                          stride=1,
+                          padding='SAME', 
+                          is_training=is_training,
+                          regularizer=regularizer)
+
+  with tf.variable_scope('inc_2_5x5'):
+    with tf.variable_scope('reduce'):
+      act2 = conv_relu_bn(inputs, 
+                          filter_shape=[1,1], 
+                          num_filters=num_5x5_reduce, 
+                          stride=1,
+                          padding='SAME', 
+                          is_training=is_training,
+                          regularizer=regularizer)
+    with tf.variable_scope('conv'):
+      act2 = conv_relu_bn(act2, 
+                          filter_shape=[5,5], 
+                          num_filters=num_5x5, 
+                          stride=1,
+                          padding='SAME', 
+                          is_training=is_training,
+                          regularizer=regularizer)
+
+  with tf.variable_scope('inc_3_proj'):
+    with tf.variable_scope('pool'):
+      act3 = tf.nn.max_pool(inputs,
+                            ksize=[1,3,3,1],
+                            strides=[1,1,1,1],
+                            padding='SAME')
+    with tf.variable_scope('proj'):
+      act3 = conv_relu_bn(act3, 
+                          filter_shape=[1,1], 
+                          num_filters=num_proj, 
+                          stride=1,
+                          padding='SAME', 
+                          is_training=is_training,
+                          regularizer=regularizer)
+
+  x = tf.concat(values=[act0, act1, act2, act3], axis=-1)
+  return x
 
 
 

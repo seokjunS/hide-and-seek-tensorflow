@@ -204,15 +204,15 @@ class AlexnetGAP(object):
 
 
   def inference_with_labels(self, sess, data, labels):
-    loss, scores, pred = sess.run(
-      [self.softmax_loss, self.score_op, self.pred_op], 
+    loss, hits, pred = sess.run(
+      [self.softmax_loss, self.hit_op, self.pred_op], 
       feed_dict={
         self.inputs: data,
         self.labels: labels,
         self.is_training: False
     })
 
-    return loss, scores, pred
+    return loss, hits, pred
 
 
   def inference(self, sess, data):

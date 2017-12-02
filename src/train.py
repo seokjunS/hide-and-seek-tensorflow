@@ -179,33 +179,68 @@ def get_model(FLAGS):
   return model
 
 
+# def validation(model, sess, dataset):
+#   dataset.init(sess)
+
+#   total_loss = 0.0
+#   labels = []
+#   preds = []
+#   scores = []
+
+#   num_data = 0
+
+#   for data, label, _ in dataset.iter_batch(sess):
+#     try:
+#       loss, score, pred = model.inference_with_labels(sess, data, label)
+#     except tf.errors.OutOfRangeError:
+#       break
+
+#     samples = data.shape[0]
+
+#     num_data += samples
+#     total_loss += loss*samples
+
+#     labels.extend( label.tolist() )
+#     preds.extend( pred.tolist() )
+#     scores.extend( score.tolist() )
+    
+#   print(total_loss)
+#   print(len(labels))
+#   print(labels[:10], pred[:10])
+#   accuracy = accuracy_score(labels, preds)
+
+#   return total_loss/num_data, accuracy
+
+
+
 def validation(model, sess, dataset):
   dataset.init(sess)
 
+  num_data = NUM_CLASSES*NUM_TEST_PER_CLASS
   total_loss = 0.0
-  labels = []
-  preds = []
-  scores = []
+  hits = 0.0
 
-  num_data = 0
+  labels = np.zeros((num_data))
+  preds = np.zeros((num_data))
+
+  sidx = 0
+  eidx = 0
 
   for data, label, _ in dataset.iter_batch(sess):
-    try:
-      loss, score, pred = model.inference_with_labels(sess, data, label)
-    except tf.errors.OutOfRangeError:
-      break
-
+    loss, hit, pred = model.inference_with_labels(sess, data, label)
     samples = data.shape[0]
 
-    num_data += samples
     total_loss += loss*samples
+    hits += hit
 
-    labels.extend( label )
-    preds.extend( pred )
-    scores.extend( score )
-    
+    sidx = eidx
+    eidx += samples
+    labels[sidx:eidx] = label
+    preds[sidx:eidx] = pred
+
 
   accuracy = accuracy_score(labels, preds)
+  # print('from hit', hits, hits/num_data)
 
   return total_loss/num_data, accuracy
 
@@ -230,7 +265,7 @@ def main(sys_argv):
 
   with tf.Graph().as_default():
     ### get dataset
-    train_set = Dataset(FLAGS.valid_file,
+    train_set = Dataset(FLAGS.train_file,
                           batch_size=FLAGS.batch_size,
                           max_epoch=FLAGS.max_epoch,
                           for_training=True)
@@ -271,7 +306,8 @@ def main(sys_argv):
           # print('labels', labels)
 
         ### validation
-        if (step+1) % int(NUM_CLASSES * NUM_TRAIN_PER_CLASS / FLAGS.batch_size) == 0:
+        # if (step+1) % int(NUM_CLASSES * NUM_TRAIN_PER_CLASS / FLAGS.batch_size) == 0:
+        if (step+1) % 10 == 0:
           cnt_epoch += 1
           logging("[%s: INFO] %d epoch done!" % 
               (datetime.now(), cnt_epoch), FLAGS)
