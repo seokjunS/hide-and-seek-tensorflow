@@ -171,7 +171,8 @@ def logging(msg, FLAGS):
 def get_model(FLAGS):
   ### get model
   if FLAGS.method == 'AlexnetGAP':
-    model = AlexnetGAP(num_classes=NUM_CLASSES)
+    model = AlexnetGAP(num_classes=NUM_CLASSES,
+                       image_mean=MEAN_IMAGE_RGB)
   else:
     model = None
 
@@ -288,14 +289,14 @@ def main(sys_argv):
           need_decay = monitor.need_decay(loss)
 
           if need_decay:
-            new_lr = learning_rate / 2.0
+            new_lr = learning_rate * 0.5
 
             if new_lr < FLAGS.min_learning_rate:
-              logging("[%s: INFO] STOP! at %d. LR: %.3f" % 
+              logging("[%s: INFO] STOP! at %d. LR: %.f" % 
                 (datetime.now(), cnt_epoch, learning_rate), FLAGS)
               break
             else:
-              logging("[%s: INFO] LR decay at %d. %.3f =>  %.3f" % 
+              logging("[%s: INFO] LR decay at %d. %.f =>  %.f" % 
                 (datetime.now(), cnt_epoch, learning_rate, new_lr), FLAGS)
               learning_rate = new_lr
             

@@ -27,8 +27,10 @@ Full (simplified) AlexNet architecture:
 
 class AlexnetGAP(object):
   def __init__(self,
-               num_classes):
+               num_classes,
+               image_mean):
     self.num_classes = num_classes
+    self.image_mean = tf.reshape(tf.constant(image_mean), [1,1,1,3])
 
     # placeholders
     with tf.name_scope("Placeholders"):
@@ -45,10 +47,14 @@ class AlexnetGAP(object):
 
   def build(self):
     summaries = []
-    
-    ### first resize image
+
+    ### resize image
     x = tf.image.resize_images(self.inputs, size=[RESIZE_IMAGE_WIDTH, RESIZE_IMAGE_HEIGHT])
     # x: [batch, 227, 227, 3]
+
+    ### normalize image
+    x = tf.subtract(x, self.image_mean)
+
 
     ### CONV1
     # [55x55x96] CONV1: 96 11x11 filters at stride 4, pad 0

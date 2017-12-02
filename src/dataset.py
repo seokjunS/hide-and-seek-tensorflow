@@ -1,6 +1,6 @@
 from env import *
 import tensorflow as tf
-
+import numpy as np
 
 """
 Dataset class used for Tensorflow.
@@ -55,11 +55,43 @@ class Dataset:
 
 
 
+"""
+Aux
+calculate mean of all images
+"""
+def get_stat():
+  dataset = Dataset(os.path.join(DATA_PATH, 'train.tfrecord'),
+                    batch_size=100,
+                    for_training=False)
+
+
+
+  with tf.Session() as sess:
+    dataset.init(sess)
+
+    s = np.zeros((3))
+    cnt = 0.0
+
+    for image, _, _ in dataset.iter_batch(sess):
+      # image: [batch, w, h, 3]
+      n = image.shape[0]
+      m = np.mean(image, axis=(1, 2)) # [batch, 3]
+      m = np.sum(m, axis=0) # 3
+
+      cnt += n
+      s += m
+
+    print( s / cnt )
 
 
 
 
 if __name__ == '__main__':
+  get_stat()
+
+
+
+
   # dataset = Dataset(os.path.join(DATA_PATH, 'train.tfrecord'),
   #                   batch_size=100,
   #                   max_epoch=10,
@@ -103,27 +135,27 @@ if __name__ == '__main__':
   #       print("EOS: %d" % cnt)
   #       break
 
-  ### validation set test
-  dataset = Dataset(os.path.join(DATA_PATH, 'valid.tfrecord'),
-                  batch_size=100,
-                  for_training=False)
+  # ### validation set test
+  # dataset = Dataset(os.path.join(DATA_PATH, 'valid.tfrecord'),
+  #                 batch_size=100,
+  #                 for_training=False)
 
-  with tf.Session() as sess:
-    for i in range(10):
-      dataset.init(sess)
+  # with tf.Session() as sess:
+  #   for i in range(10):
+  #     dataset.init(sess)
 
-      for data in dataset.iter_batch(sess):
+  #     for data in dataset.iter_batch(sess):
 
-        a, b, c = data
-        # print(a)
-        # print(image)
-        # print('---------')
-        cnt += 1
+  #       a, b, c = data
+  #       # print(a)
+  #       # print(image)
+  #       # print('---------')
+  #       cnt += 1
 
-        if cnt % 50 == 0:
-          print("%d" % cnt)
+  #       if cnt % 50 == 0:
+  #         print("%d" % cnt)
 
-      print("Epoch %d finished" % i, cnt)
+  #     print("Epoch %d finished" % i, cnt)
 
 
   pass
