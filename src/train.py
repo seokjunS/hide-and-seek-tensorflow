@@ -312,8 +312,7 @@ def main(sys_argv):
           # print('labels', labels)
 
         ### validation
-        # if (step+1) % int(NUM_CLASSES * NUM_TRAIN_PER_CLASS / FLAGS.batch_size) == 0:
-        if (step+1) % 10 == 0:
+        if (step+1) % int(NUM_CLASSES * NUM_TRAIN_PER_CLASS / FLAGS.batch_size) == 0:
           cnt_epoch += 1
           logging("[%s: INFO] %d epoch done!" % 
               (datetime.now(), cnt_epoch), FLAGS)
