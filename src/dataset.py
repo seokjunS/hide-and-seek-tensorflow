@@ -7,7 +7,8 @@ Dataset class used for Tensorflow.
 Assuming that file is in TFRecord format.
 """
 class Dataset:
-  def __init__(self, filenames, batch_size, max_epoch=1, for_training=True):
+  def __init__(self, filenames, num_data, batch_size, max_epoch=1, for_training=True):
+    self.num_data = num_data
     self.for_training = for_training
     self.dataset = tf.contrib.data.TFRecordDataset(filenames)
 

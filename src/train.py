@@ -220,7 +220,7 @@ def get_model(FLAGS):
 def validation(model, sess, dataset):
   dataset.init(sess)
 
-  num_data = NUM_CLASSES*NUM_TEST_PER_CLASS
+  num_data = dataset.num_data
   total_loss = 0.0
   hits = 0.0
 
@@ -270,11 +270,13 @@ def main(sys_argv):
   with tf.Graph().as_default():
     ### get dataset
     train_set = Dataset(FLAGS.train_file,
+                          num_data=NUM_CLASSES*NUM_TRAIN_PER_CLASS,
                           batch_size=FLAGS.batch_size,
                           max_epoch=FLAGS.max_epoch,
                           for_training=True)
 
     valid_set = Dataset(FLAGS.valid_file,
+                        num_data=NUM_CLASSES*NUM_TEST_PER_CLASS,
                         batch_size=FLAGS.batch_size,
                         for_training=False)
 
@@ -310,7 +312,8 @@ def main(sys_argv):
           # print('labels', labels)
 
         ### validation
-        if (step+1) % int(NUM_CLASSES * NUM_TRAIN_PER_CLASS / FLAGS.batch_size) == 0:
+        # if (step+1) % int(NUM_CLASSES * NUM_TRAIN_PER_CLASS / FLAGS.batch_size) == 0:
+        if (step+1) % 10 == 0:
           cnt_epoch += 1
           logging("[%s: INFO] %d epoch done!" % 
               (datetime.now(), cnt_epoch), FLAGS)
@@ -327,7 +330,7 @@ def main(sys_argv):
 
           ### rate decaying check
           # gradually decaying
-          new_lr = (FLAGS.learning_rate - FLAGS.min_learning_rate) * (1 - cnt_epoch/(FLAGS.max_epoch+1.0)) + FLAGS.min_learning_rate
+          new_lr = (FLAGS.learning_rate - FLAGS.min_learning_rate) * (1 - cnt_epoch/(FLAGS.max_epoch*1.0)) + FLAGS.min_learning_rate
           logging("[%s: INFO] LR decay at %d. %f =>  %f" % 
                 (datetime.now(), cnt_epoch, learning_rate, new_lr), FLAGS)
           learning_rate = new_lr
