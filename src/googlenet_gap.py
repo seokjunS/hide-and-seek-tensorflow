@@ -231,7 +231,10 @@ class GooglenetGAP(object):
 
       optimizer = tf.train.MomentumOptimizer( self.learning_rate, 0.9 )
       # optimizer = tf.train.AdamOptimizer( self.learning_rate )
-      self.train_op = optimizer.minimize( self.loss_op )
+      
+      updates_ops = tf.get_collection(tf.GraphKeys.UPDATE_OPS)
+      with tf.control_dependencies(updates_ops):
+        self.train_op = optimizer.minimize( self.loss_op )
 
       self.score_op = tf.nn.softmax(self.logits)
       self.pred_op = tf.argmax(self.logits, axis=1)

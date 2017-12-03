@@ -10,10 +10,7 @@ from env import *
 from dataset import Dataset
 from alexnet_gap import *
 from googlenet_gap import *
-# from train import get_model, validation
-from train import get_model
-from sklearn.metrics import accuracy_score
-
+from train import get_model, validation
 
 """
 Set parameters
@@ -55,10 +52,10 @@ def arg_parse(args):
 
 
 
-def validation(model, sess, dataset):
+def inference(model, sess, dataset):
+  dataset.init(sess)
+
   num_data = dataset.num_data
-  total_loss = 0.0
-  hits = 0.0
 
   labels = np.zeros((num_data))
   preds = np.zeros((num_data))
@@ -67,11 +64,8 @@ def validation(model, sess, dataset):
   eidx = 0
 
   for data, label, _ in dataset.iter_batch(sess):
-    loss, hit, pred = model.inference_with_labels(sess, data, label)
+    pred = model.inference(sess, data)
     samples = data.shape[0]
-
-    total_loss += loss*samples
-    hits += hit
 
     sidx = eidx
     eidx += samples
@@ -80,9 +74,13 @@ def validation(model, sess, dataset):
 
 
   accuracy = accuracy_score(labels, preds)
-  print('from hit', hits, hits/num_data)
+  print(accuracy)
 
-  return total_loss/num_data, accuracy
+  return accuracy
+
+
+
+
 
 
 
@@ -96,22 +94,14 @@ def main(sys_argv):
 
 
   with tf.Graph().as_default():
-    # valid_set = Dataset(FLAGS.valid_file,
-    #                     batch_size=FLAGS.batch_size,
-    #                     for_training=False)
     valid_set = Dataset(FLAGS.valid_file,
-                          num_data=NUM_CLASSES*NUM_TEST_PER_CLASS,
-                          batch_size=FLAGS.batch_size,
-                          max_epoch=1,
-                          for_training=True)
+                        num_data=NUM_CLASSES*NUM_TEST_PER_CLASS,
+                        batch_size=FLAGS.batch_size,
+                        for_training=False)
     # valid_set = Dataset(TRAIN_TFRECORD,
+    #                     num_data=NUM_CLASSES*NUM_TRAIN_PER_CLASS,
     #                     batch_size=FLAGS.batch_size,
     #                     for_training=False)
-    # valid_set = Dataset(TRAIN_TFRECORD,
-    #                       num_data=NUM_CLASSES*NUM_TRAIN_PER_CLASS,
-    #                       batch_size=FLAGS.batch_size,
-    #                       max_epoch=1,
-    #                       for_training=True)
 
     model = get_model(FLAGS)
 
@@ -126,23 +116,13 @@ def main(sys_argv):
 
       saver.restore( sess, FLAGS.checkpoint )
 
+      ### test!
+      inference(model, sess, valid_set)
+
       # loss, accuracy = validation(model, sess, valid_set)
-      num_hits = 0.0
-      num_data = 0.0
-      loss = 0.0
-      for data, label, _ in valid_set.iter_batch(sess):
-        preds = model.inference(sess, data)
-        # print(len(preds), type(preds))
-        num_hits += (preds == label).sum()
-        num_data += len(preds)
 
-      print(valid_set.num_data, num_data)
-      assert(valid_set.num_data == num_data)
-      accuracy = num_hits / num_data
-
-
-      print("[%s: INFO] valuation Result of testset: loss: %.3f, accuracy: %.3f" % 
-            (datetime.now(), loss, accuracy))
+      # print("[%s: INFO] valuation Result of testset: loss: %.3f, accuracy: %.3f" % 
+      #       (datetime.now(), loss, accuracy))
 
 
 
