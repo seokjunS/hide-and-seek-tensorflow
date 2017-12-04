@@ -183,38 +183,6 @@ def get_model(FLAGS):
   return model
 
 
-# def validation(model, sess, dataset):
-#   dataset.init(sess)
-
-#   total_loss = 0.0
-#   labels = []
-#   preds = []
-#   scores = []
-
-#   num_data = 0
-
-#   for data, label, _ in dataset.iter_batch(sess):
-#     try:
-#       loss, score, pred = model.inference_with_labels(sess, data, label)
-#     except tf.errors.OutOfRangeError:
-#       break
-
-#     samples = data.shape[0]
-
-#     num_data += samples
-#     total_loss += loss*samples
-
-#     labels.extend( label.tolist() )
-#     preds.extend( pred.tolist() )
-#     scores.extend( score.tolist() )
-    
-#   print(total_loss)
-#   print(len(labels))
-#   print(labels[:10], pred[:10])
-#   accuracy = accuracy_score(labels, preds)
-
-#   return total_loss/num_data, accuracy
-
 
 
 def validation(model, sess, dataset):
@@ -230,7 +198,7 @@ def validation(model, sess, dataset):
   sidx = 0
   eidx = 0
 
-  for data, label, _ in dataset.iter_batch(sess):
+  for data, label, _, _ in dataset.iter_batch(sess):
     loss, hit, pred = model.inference_with_labels(sess, data, label)
     samples = data.shape[0]
 
@@ -295,7 +263,7 @@ def main(sys_argv):
       sess.run( tf.global_variables_initializer() )
 
       cnt_epoch = 0
-      for step, (data, labels, _) in enumerate(train_set.iter_batch(sess)):
+      for step, (data, labels, _, _) in enumerate(train_set.iter_batch(sess)):
         start_time = time.time()
         loss, scores, hits, summary = model.train(sess, data, labels, learning_rate)
         duration = time.time() - start_time

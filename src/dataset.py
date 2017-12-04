@@ -29,14 +29,19 @@ class Dataset:
   def parser(self, example_proto):
     features = {'label': tf.FixedLenFeature([], tf.int64),
                 'image': tf.FixedLenFeature([], tf.string),
-                'filename': tf.FixedLenFeature([], tf.string) }
+                'filename': tf.FixedLenFeature([], tf.string),
+                'xmin': tf.FixedLenFeature([], tf.int64),
+                'ymin': tf.FixedLenFeature([], tf.int64),
+                'xmax': tf.FixedLenFeature([], tf.int64),
+                'ymax': tf.FixedLenFeature([], tf.int64) }
     parsed = tf.parse_single_example(example_proto, features)
 
     image = tf.decode_raw(parsed['image'], tf.uint8)
     image = tf.reshape(image, (IMAGE_WIDTH, IMAGE_HEIGHT, 3))
 
-    return image, parsed['label'], parsed['filename']
-    # return parsed['image'], parsed['label'], parsed['filename']
+    bbox = [parsed['xmin'], parsed['ymin'], parsed['xmax'], parsed['ymax']]
+
+    return image, parsed['label'], parsed['filename'], bbox
 
 
   def init(self, sess):
@@ -73,7 +78,7 @@ def get_stat():
     s = np.zeros((3))
     cnt = 0.0
 
-    for image, _, _ in dataset.iter_batch(sess):
+    for image, _, _, _ in dataset.iter_batch(sess):
       # image: [batch, w, h, 3]
       n = image.shape[0]
       m = np.mean(image, axis=(1, 2)) # [batch, 3]
@@ -88,7 +93,7 @@ def get_stat():
 
 
 if __name__ == '__main__':
-  get_stat()
+  # get_stat()
 
 
 
@@ -136,27 +141,31 @@ if __name__ == '__main__':
   #       print("EOS: %d" % cnt)
   #       break
 
-  # ### validation set test
-  # dataset = Dataset(os.path.join(DATA_PATH, 'valid.tfrecord'),
-  #                 batch_size=100,
-  #                 for_training=False)
+  ### validation set test
+  dataset = Dataset(VALID_TFRECORD,
+                    num_data=NUM_CLASSES*NUM_TEST_PER_CLASS,
+                    batch_size=100,
+                    for_training=False)
 
-  # with tf.Session() as sess:
-  #   for i in range(10):
-  #     dataset.init(sess)
+  annot_file = os.path.join(DATA_PATH, 'tiny-imagenet-200', 'val', 'val_annotations.txt')
+  fname2nid = dict()
+  fname2bbox = dict()
+  with open(annot_file, 'r') as fr:
+    for row in fr.readlines():
+      fname, nid, xmin, ymin, xmax, ymax = row.rstrip().split("\t")
+      fname2nid[ fname ] = nid
+      fname2bbox[ fname ] = [ int(x) for x in [xmin, ymin, xmax, ymax] ]
 
-  #     for data in dataset.iter_batch(sess):
+  cnt = 0
+  with tf.Session() as sess:
+    dataset.init(sess)
 
-  #       a, b, c = data
-  #       # print(a)
-  #       # print(image)
-  #       # print('---------')
-  #       cnt += 1
-
-  #       if cnt % 50 == 0:
-  #         print("%d" % cnt)
-
-  #     print("Epoch %d finished" % i, cnt)
-
+    for data, label, fnames, bboxes in dataset.iter_batch(sess):
+      cnt += 1
+      for i, fname in enumerate(fnames):
+        bbox = bboxes[i]
+        for j, a in enumerate(bbox):
+          assert( a == fname2bbox[fname][j] )
+  print(cnt)
 
   pass

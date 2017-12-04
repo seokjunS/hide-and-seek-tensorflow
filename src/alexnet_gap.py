@@ -1,7 +1,7 @@
 import tensorflow as tf
 from env import *
 import net_utils as net
-
+import numpy as np
 
 
 """
@@ -35,7 +35,8 @@ class AlexnetGAP(object):
 
     # placeholders
     with tf.name_scope("Placeholders"):
-      self.inputs = tf.placeholder(tf.float32, shape=[None, IMAGE_WIDTH, IMAGE_HEIGHT, 3], name='image')
+      # self.inputs = tf.placeholder(tf.float32, shape=[None, IMAGE_WIDTH, IMAGE_HEIGHT, 3], name='image')
+      self.inputs = tf.placeholder(tf.float32, shape=[None, None, None, 3], name='image')
       self.labels = tf.placeholder(tf.int64, shape=[None], name='label')
       self.learning_rate = tf.placeholder(tf.float32, shape=(), name='lr')
       self.is_training = tf.placeholder(tf.bool, shape=(), name='is_training')
@@ -139,6 +140,7 @@ class AlexnetGAP(object):
                            padding='SAME', 
                            is_training=self.is_training,
                            regularizer=tf.contrib.layers.l2_regularizer(scale=self.l2_reg))
+      self.F = x
       # x: [batch, 13, 13, 512]
       # summaries.append( tf.summary.histogram('conv_6', x) )
 
@@ -158,6 +160,7 @@ class AlexnetGAP(object):
                   initializer=tf.contrib.layers.xavier_initializer(),
                   regularizer=tf.contrib.layers.l2_regularizer(scale=self.l2_reg))
 
+      self.W = weights
       self.logits = tf.matmul(x, weights)
       # logits: [batch, num_classes]
 
@@ -213,19 +216,42 @@ class AlexnetGAP(object):
       feed_dict={
         self.inputs: data,
         self.labels: labels,
-        self.is_training: False
+        self.is_training: True
     })
 
     return loss, hits, pred
 
 
-  def inference(self, sess, data):
-    pred = sess.run(self.pred_op, feed_dict={
+  def inference(self, sess, data, multi_crop=False):
+    # pred, score, W, F = sess.run([self.pred_op, self.score_op, self.W, self.F], feed_dict={
+    #   self.inputs: data,
+    #   self.is_training: True
+    # })
+
+    if multi_crop:
+      raw_data = data
+      (crops, flip_crops), idxs, sizes = net.multi_crop(data, size=0.75)
+      data = np.concatenate( crops + flip_crops, axis=0 )
+      # print(raw_data.shape, data.shape)
+    else:
+      idxs = sizes = None
+
+    pred, score, W, F = sess.run([self.pred_op, self.score_op, self.W, self.F], feed_dict={
       self.inputs: data,
-      self.is_training: False
+      self.is_training: True
     })
 
-    return pred
+    if multi_crop:
+      # print(score.shape)
+      num_n, num_classes = score.shape[0]/10, score.shape[1]
+      shape = (10, num_n, num_classes)
+      score = score.reshape(shape)
+      score = np.mean(score, axis=0)
+
+      pred = np.argmax(score, axis=1)
+
+
+    return pred, score, W, F, idxs, sizes
 
 
   def summary_valid_loss(self, sess, loss):

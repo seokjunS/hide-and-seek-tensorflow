@@ -66,11 +66,17 @@ def _bytes_feature(value):
   return tf.train.Feature(bytes_list=tf.train.BytesList(value=[value]))
 
 
-def create_tf_example(image, label, fname):
+def create_tf_example(image, label, fname, bbox=[0,0,0,0]):
+  xmin, ymin, xmax, ymax = bbox
+
   tf_example = tf.train.Example(features=tf.train.Features(feature={
     'image': _bytes_feature(image),
     'label': _int64_feature(label),
-    'filename': _bytes_feature(fname.encode('utf8'))
+    'filename': _bytes_feature(fname.encode('utf8')),
+    'xmin': _int64_feature(xmin),
+    'ymin': _int64_feature(ymin),
+    'xmax': _int64_feature(xmax),
+    'ymax': _int64_feature(ymax) 
   }))
 
   return tf_example
@@ -86,6 +92,7 @@ def gen_data():
   writer = tf.python_io.TFRecordWriter(TRAIN_TFRECORD)
 
   image_path = os.path.join(DATA_PATH, 'tiny-imagenet-200', 'train', '%s', 'images', '*.JPEG')
+  annot_path = os.path.join(DATA_PATH, 'tiny-imagenet-200', 'train', '%s', '%s_boxes.txt')
 
   cnt = 0
   for nid in nid2idx:
@@ -93,12 +100,20 @@ def gen_data():
     files = glob.glob( image_path % nid )
     assert(len(files) == NUM_TRAIN_PER_CLASS)
 
+    # get annot
+    fname2bbox = dict()
+    with open(annot_path%(nid,nid), 'r') as fr:
+      for row in fr.readlines():
+        fname, xmin, ymin, xmax, ymax = row.rstrip().split("\t")
+        fname2bbox[ fname ] = [ int(x) for x in [xmin, ymin, xmax, ymax] ]
+
     for file in files:
       img = misc.imread(file, mode='RGB')
       fname = file.split("/")[-1]
+      bbox = fname2bbox[fname]
       assert(img.shape == (IMAGE_WIDTH, IMAGE_HEIGHT, 3))
 
-      tf_data = create_tf_example(image=img.tobytes(), label=label, fname=fname)
+      tf_data = create_tf_example(image=img.tobytes(), label=label, fname=fname, bbox=bbox)
       writer.write(tf_data.SerializeToString())
 
       cnt += 1
@@ -113,13 +128,13 @@ def gen_data():
   # first read nids
   annot_file = os.path.join(DATA_PATH, 'tiny-imagenet-200', 'val', 'val_annotations.txt')
 
-  file2nid = dict()
+  fname2nid = dict()
+  fname2bbox = dict()
   with open(annot_file, 'r') as fr:
     for row in fr.readlines():
-      elems = row.rstrip().split("\t")
-      f = elems[0]
-      nid = elems[1]
-      file2nid[ f ] = nid
+      fname, nid, xmin, ymin, xmax, ymax = row.rstrip().split("\t")
+      fname2nid[ fname ] = nid
+      fname2bbox[ fname ] = [ int(x) for x in [xmin, ymin, xmax, ymax] ]
 
   # iter images
   image_path = os.path.join(DATA_PATH, 'tiny-imagenet-200', 'val','images', '*.JPEG')
@@ -131,10 +146,11 @@ def gen_data():
   for file in files:
     img = misc.imread(file, mode='RGB')
     fname = file.split("/")[-1]
-    label = nid2idx[ file2nid[fname] ]
+    label = nid2idx[ fname2nid[fname] ]
+    bbox = fname2bbox[fname]
     assert(img.shape == (IMAGE_WIDTH, IMAGE_HEIGHT, 3))
 
-    tf_data = create_tf_example(image=img.tobytes(), label=label, fname=fname)
+    tf_data = create_tf_example(image=img.tobytes(), label=label, fname=fname, bbox=bbox)
     writer.write(tf_data.SerializeToString())
 
     cnt += 1
@@ -179,7 +195,16 @@ def read_tfrecord(fname):
 
 
 
+def get_valid_image(fname):
+  image_path = os.path.join(DATA_PATH, 'tiny-imagenet-200', 'val','images', fname)
+  img = misc.imread(image_path, mode='RGB')
+  return img
+
+
+
+
+
 if __name__ == '__main__':
   # gen_data()
-  read_tfrecord(VALID_TFRECORD)
+  # read_tfrecord(VALID_TFRECORD)
   pass

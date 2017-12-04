@@ -103,5 +103,6 @@ ENV/
 
 ## custom
 /temp
+/tmp
 /trained
 /data
