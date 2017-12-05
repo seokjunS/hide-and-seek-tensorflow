@@ -393,7 +393,7 @@ def visualize_result(sidx, cam, iou, true_bbox, pred_bbox, label, prob, fname):
 
     plt.tight_layout()
     # plt.show()
-    plt.savefig('tmp/%d.png' % (sidx+i))
+    plt.savefig('tmp/%s' % (fname_))
     plt.close()    
 
     # plt.savefig('tmp/%d.png' % i)
@@ -437,7 +437,7 @@ def main(sys_argv):
       saver.restore( sess, FLAGS.checkpoint )
 
       ### test!
-      inference(model, sess, valid_set, localization_thres=0.3, vis_thres=0.9, multi_crop=True, do_vis=False)
+      inference(model, sess, valid_set, localization_thres=0.3, vis_thres=0.9, multi_crop=True, do_vis=True)
       # inference(model, sess, valid_set, localization_thres=0.2, vis_thres=0.9)
       # print("---------------------")
       # inference(model, sess, valid_set, localization_thres=0.3, vis_thres=0.9)

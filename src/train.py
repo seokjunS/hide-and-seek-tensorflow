@@ -86,6 +86,12 @@ def arg_parse(args):
       default='GooglenetGAP',
       help='Path to write log, checkpoint, and summary files.'
   )
+  parser.add_argument(
+      '--do_hide',
+      type=int,
+      default=None,
+      help='Hide and Seek? If yes, number of grids.'
+  )
 
   FLAGS, unparsed = parser.parse_known_args(args)
 
@@ -173,10 +179,14 @@ def get_model(FLAGS):
   ### get model
   if FLAGS.method == 'AlexnetGAP':
     model = AlexnetGAP(num_classes=NUM_CLASSES,
-                       image_mean=MEAN_IMAGE_RGB)
+                       image_mean=MEAN_IMAGE_RGB,
+                       do_hide=FLAGS.do_hide)
+    logging("[%s: INFO] AlexnetGAP with Hide: %s" % 
+                (datetime.now(), str(FLAGS.do_hide is not None)), FLAGS)
   elif FLAGS.method == 'GooglenetGAP':
     model = GooglenetGAP(num_classes=NUM_CLASSES,
-                         image_mean=MEAN_IMAGE_RGB)
+                         image_mean=MEAN_IMAGE_RGB,
+                         do_hide=FLAGS.do_hide)
   else:
     model = None
 

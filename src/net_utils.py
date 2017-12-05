@@ -215,3 +215,65 @@ def multi_crop_test():
   plt.tight_layout()
   plt.show()
 
+
+
+
+def gen_random_patch(shape, N):
+  num_batch, w, h = shape
+  S = int(math.sqrt( w * h / N ))
+  num_x = int(w / S)
+  num_y = int(h / S)
+
+  # create random matrix
+  p = np.random.random_integers(low=0, high=1, size=num_batch*N)
+  p = p.reshape(num_batch, num_x, num_y)
+  # p: (nb, nx, ny)
+
+  mask = np.repeat(p, S, axis=1)
+  mask = np.repeat(mask, S, axis=2)
+
+  return mask
+
+
+
+def gen_random_patch_test():
+  from scipy import misc
+  import matplotlib.pyplot as plt
+  from net_utils import multi_crop
+  import numpy as np
+
+  image_mean = [122.46042058, 114.25709442, 101.36342874]
+
+  img = misc.imread('../temp/images.png', mode='RGB')
+
+  n, w, h, _ = (1,) + img.shape
+  mask = gen_random_patch(shape=(n, w, h), N=25)
+  mask = np.expand_dims(mask, axis=3)
+
+  data = img * mask + (1-mask) * image_mean
+
+
+  # [top_left, top_right, bottom_left, bottom_right, center]
+  f, ((ax1, ax2), (ax3, ax4)) = plt.subplots(2, 2)
+
+  ### ax1: raw image
+  ax1.imshow(img)
+  ax1.set_title('Raw')
+
+  ## ax2: top_left
+  ax2.imshow(data[0].astype(np.uint8))
+  ax2.set_title('Hide')
+
+  ## ax3
+  ax3.imshow(mask[0,:,:,0].astype(np.uint8)*200)
+  ax3.set_title('mask')
+
+  ## ax4
+  ax4.imshow((img * mask)[0].astype(np.uint8))
+  ax4.set_title('mask')
+
+  plt.tight_layout()
+  plt.show()
+
+
+

@@ -28,10 +28,14 @@ Full (simplified) AlexNet architecture:
 class AlexnetGAP(object):
   def __init__(self,
                num_classes,
-               image_mean):
+               image_mean,
+               do_hide = None):
     self.num_classes = num_classes
-    self.image_mean = tf.reshape(tf.constant(image_mean), [1,1,1,3])
     self.l2_reg = 0.001
+    self.do_hide = do_hide
+    self.image_mean = np.array(image_mean).reshape((1, 1, 1, 3))
+    
+    self.tf_image_mean =  tf.constant(image_mean, name='image_mean')
 
     # placeholders
     with tf.name_scope("Placeholders"):
@@ -50,13 +54,15 @@ class AlexnetGAP(object):
   def build(self):
     summaries = []
 
+    ### normalize image
+    x = tf.subtract(self.inputs, self.tf_image_mean)
+    # summaries.append( tf.summary.histogram('norm_image', x) )
+
+
     ### resize image
-    x = tf.image.resize_images(self.inputs, size=[ALEXNET_IMAGE_WIDTH, ALEXNET_IMAGE_HEIGHT])
+    x = tf.image.resize_images(x, size=[ALEXNET_IMAGE_WIDTH, ALEXNET_IMAGE_HEIGHT])
     # x: [batch, 227, 227, 3]
 
-    ### normalize image
-    x = tf.subtract(x, self.image_mean)
-    # summaries.append( tf.summary.histogram('norm_image', x) )
 
 
     ### CONV1
@@ -197,6 +203,14 @@ class AlexnetGAP(object):
 
 
   def train(self, sess, data, labels, learning_rate):
+    ### do hiding?
+    if self.do_hide is not None: # do_hide is num of grid
+      n, w, h, _ = data.shape
+      mask = net.gen_random_patch(shape=(n, w, h), N=self.do_hide)
+      mask = np.expand_dims(mask, axis=3)
+
+      data = data * mask + (1-mask) * self.image_mean
+
     _, loss, scores, hits, summary = sess.run(
       [self.train_op, self.loss_op, self.score_op, self.hit_op, self.summary_op],
       feed_dict={
