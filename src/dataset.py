@@ -54,8 +54,9 @@ class Dataset:
   def iter_batch(self, sess):
     while True:
       try:
-        res = sess.run(self.next)
-        yield res
+        img, label, fname, bbox = sess.run(self.next)
+        bbox = np.array(bbox)
+        yield img, label, fname, bbox
       except tf.errors.OutOfRangeError:
           break
 
