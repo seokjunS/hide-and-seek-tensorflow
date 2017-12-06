@@ -55,7 +55,6 @@ class Dataset:
     while True:
       try:
         img, label, fname, bbox = sess.run(self.next)
-        bbox = np.array(bbox)
         yield img, label, fname, bbox
       except tf.errors.OutOfRangeError:
           break
