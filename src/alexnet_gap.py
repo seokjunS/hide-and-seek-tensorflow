@@ -230,7 +230,7 @@ class AlexnetGAP(object):
       feed_dict={
         self.inputs: data,
         self.labels: labels,
-        self.is_training: True
+        self.is_training: False
     })
 
     return loss, hits, pred

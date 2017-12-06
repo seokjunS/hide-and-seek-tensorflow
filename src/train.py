@@ -181,14 +181,19 @@ def get_model(FLAGS):
     model = AlexnetGAP(num_classes=NUM_CLASSES,
                        image_mean=MEAN_IMAGE_RGB,
                        do_hide=FLAGS.do_hide)
-    logging("[%s: INFO] AlexnetGAP with Hide: %s" % 
-                (datetime.now(), str(FLAGS.do_hide is not None)), FLAGS)
   elif FLAGS.method == 'GooglenetGAP':
     model = GooglenetGAP(num_classes=NUM_CLASSES,
                          image_mean=MEAN_IMAGE_RGB,
                          do_hide=FLAGS.do_hide)
   else:
     model = None
+
+  s = "[%s: INFO] %s with Hide: %s" % \
+                (datetime.now(), FLAGS.method, str(FLAGS.do_hide is not None))
+  if hasattr(FLAGS, 'log_dir'):
+    logging(s, FLAGS)
+  else:
+    print(s)
 
   return model
 

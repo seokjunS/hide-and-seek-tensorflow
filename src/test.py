@@ -47,13 +47,31 @@ def arg_parse(args):
       default='AlexnetGAP',
       help='Which method?'
   )
-
   parser.add_argument(
       '--valid_file',
       type=str,
       default=VALID_TFRECORD,
       help='Directory for input data.'
   )
+  parser.add_argument(
+      '--do_hide',
+      type=int,
+      default=None,
+      help='Hide and Seek? If yes, number of grids.'
+  )
+  parser.add_argument(
+      '--do_multi_crop',
+      type=bool,
+      default=False,
+      help=''
+  )
+  parser.add_argument(
+      '--do_vis',
+      type=bool,
+      default=False,
+      help=''
+  )
+
 
 
   FLAGS, unparsed = parser.parse_known_args(args)
@@ -137,9 +155,9 @@ def inference(model, sess, dataset, localization_thres=0.2, vis_thres=0.9, multi
   gt_known_loc = num_iou_hits / float(num_data)
   top_1_class = num_label_hits / float(num_data)
 
-  print(top_1_loc, gt_known_loc, top_1_class)
+  # print(top_1_loc, gt_known_loc, top_1_class)
   print('Vis %d'%(int(num_vis)))
-  return top_1_class
+  return top_1_loc, gt_known_loc, top_1_class
 
 
 
@@ -437,7 +455,18 @@ def main(sys_argv):
       saver.restore( sess, FLAGS.checkpoint )
 
       ### test!
-      inference(model, sess, valid_set, localization_thres=0.3, vis_thres=0.9, multi_crop=True, do_vis=True)
+      for thres in [0.2, 0.3, 0.4, 0.5]:
+        print("localization_thres: %.2f" % thres)
+        top_1_loc, gt_known_loc, top_1_class = inference(model, sess, valid_set, 
+                                                  localization_thres=thres, 
+                                                  vis_thres=0.9, 
+                                                  multi_crop=FLAGS.do_multi_crop, 
+                                                  do_vis=FLAGS.do_vis)
+        print("Top-1 Loc: %.4f, GT-known Loc: %.4f, Top-l Clas: %.4f" %
+                (top_1_loc, gt_known_loc, top_1_class))
+        print("---------------------")
+
+
       # inference(model, sess, valid_set, localization_thres=0.2, vis_thres=0.9)
       # print("---------------------")
       # inference(model, sess, valid_set, localization_thres=0.3, vis_thres=0.9)
