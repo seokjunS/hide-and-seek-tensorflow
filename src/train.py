@@ -12,6 +12,7 @@ from env import *
 from dataset import Dataset
 from alexnet_gap import *
 from googlenet_gap import *
+from customnet_gap import *
 
 
 """
@@ -184,6 +185,10 @@ def get_model(FLAGS):
                        do_hide=FLAGS.do_hide)
   elif FLAGS.method == 'GooglenetGAP':
     model = GooglenetGAP(num_classes=NUM_CLASSES,
+                         image_mean=MEAN_IMAGE_RGB,
+                         do_hide=FLAGS.do_hide)
+  elif FLAGS.method == 'CustomnetGAP':
+    model = CustomnetGAP(num_classes=NUM_CLASSES,
                          image_mean=MEAN_IMAGE_RGB,
                          do_hide=FLAGS.do_hide)
   else:

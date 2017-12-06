@@ -116,6 +116,42 @@ def inception(inputs,
   return x
 
 
+def fire(inputs,
+          num_squeeze,
+          num_1x1,
+          num_3x3,
+          is_training,
+          regularizer=None):
+  with tf.variable_scope('squeeze'):
+    act = conv_relu_bn( inputs, 
+                        filter_shape=[1,1], 
+                        num_filters=num_squeeze, 
+                        stride=1,
+                        padding='SAME', 
+                        is_training=is_training,
+                        regularizer=regularizer)
+
+  with tf.variable_scope('expand'):
+    with tf.variable_scope('conv_1x1'):
+      act1 = conv_relu_bn(inputs, 
+                          filter_shape=[1,1], 
+                          num_filters=num_1x1, 
+                          stride=1,
+                          padding='SAME', 
+                          is_training=is_training,
+                          regularizer=regularizer)
+    with tf.variable_scope('conv_3x3'):
+      act2 = conv_relu_bn(inputs, 
+                          filter_shape=[3,3], 
+                          num_filters=num_3x3, 
+                          stride=1,
+                          padding='SAME', 
+                          is_training=is_training,
+                          regularizer=regularizer)
+
+  x = tf.concat(values=[act1, act2], axis=-1)
+  return x
+
 
 def multi_crop(data, size=0.75):
   ### do 10 crops
