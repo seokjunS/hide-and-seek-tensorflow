@@ -12,7 +12,7 @@ class GooglenetGAP(object):
   def __init__(self,
                num_classes,
                image_mean,
-               do_hide = None):
+               do_hide = []):
     self.num_classes = num_classes
     self.l2_reg = 0.001
     self.do_hide = do_hide
@@ -255,12 +255,16 @@ class GooglenetGAP(object):
 
   def train(self, sess, data, labels, learning_rate):
     ### do hiding?
-    if self.do_hide is not None: # do_hide is num of grid
-      n, w, h, _ = data.shape
-      mask = net.gen_random_patch(shape=(n, w, h), N=self.do_hide)
-      mask = np.expand_dims(mask, axis=3)
+    if len(self.do_hide) > 0: # do_hide is num of grid
+      N = np.random.choice(self.do_hide, 1)[0]
 
-      data = data * mask + (1-mask) * self.image_mean
+      ### if N == 0: use full image
+      if N != 0:
+        n, w, h, _ = data.shape
+        mask = net.gen_random_patch(shape=(n, w, h), N=N)
+        mask = np.expand_dims(mask, axis=3)
+
+        data = data * mask + (1-mask) * self.image_mean
 
     _, loss, scores, hits, summary = sess.run(
       [self.train_op, self.loss_op, self.score_op, self.hit_op, self.summary_op],

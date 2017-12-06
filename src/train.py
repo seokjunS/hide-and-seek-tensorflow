@@ -89,7 +89,8 @@ def arg_parse(args):
   parser.add_argument(
       '--do_hide',
       type=int,
-      default=None,
+      nargs='+',
+      default=[],
       help='Hide and Seek? If yes, number of grids.'
   )
 
@@ -189,7 +190,7 @@ def get_model(FLAGS):
     model = None
 
   s = "[%s: INFO] %s with Hide: %s" % \
-                (datetime.now(), FLAGS.method, str(FLAGS.do_hide is not None))
+                (datetime.now(), FLAGS.method, str(len(FLAGS.do_hide) > 0))
   if hasattr(FLAGS, 'log_dir'):
     logging(s, FLAGS)
   else:

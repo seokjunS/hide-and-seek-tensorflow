@@ -56,7 +56,10 @@ class Dataset:
       try:
         img, label, fname, bbox = sess.run(self.next)
         # I don't know why but version 1.2 and 1.3 works differently
-        bbox = np.array(bbox).T
+        n = label.shape[0]
+        bbox = np.array(bbox)
+        if bbox.shape[0] != n:
+          bbox = bbox.T
         yield img, label, fname, bbox
       except tf.errors.OutOfRangeError:
           break

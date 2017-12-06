@@ -220,9 +220,9 @@ def multi_crop_test():
 
 def gen_random_patch(shape, N):
   num_batch, w, h = shape
-  S = int(math.sqrt( w * h / N ))
-  num_x = int(w / S)
-  num_y = int(h / S)
+  S = int(math.ceil(math.sqrt( w * h / N )))
+  num_x = int(math.ceil(float(w) / S))
+  num_y = int(math.ceil(float(h) / S))
 
   # create random matrix
   p = np.random.random_integers(low=0, high=1, size=num_batch*N)
@@ -231,12 +231,13 @@ def gen_random_patch(shape, N):
 
   mask = np.repeat(p, S, axis=1)
   mask = np.repeat(mask, S, axis=2)
+  mask = mask[:, :w, :h] # crop
 
   return mask
 
 
 
-def gen_random_patch_test():
+def gen_random_patch_test(fname='../temp/images.png', N=25):
   from scipy import misc
   import matplotlib.pyplot as plt
   from net_utils import multi_crop
@@ -244,10 +245,10 @@ def gen_random_patch_test():
 
   image_mean = [122.46042058, 114.25709442, 101.36342874]
 
-  img = misc.imread('../temp/images.png', mode='RGB')
+  img = misc.imread(fname, mode='RGB')
 
   n, w, h, _ = (1,) + img.shape
-  mask = gen_random_patch(shape=(n, w, h), N=25)
+  mask = gen_random_patch(shape=(n, w, h), N=N)
   mask = np.expand_dims(mask, axis=3)
 
   data = img * mask + (1-mask) * image_mean
