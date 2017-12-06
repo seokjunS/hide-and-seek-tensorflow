@@ -55,7 +55,8 @@ class Dataset:
     while True:
       try:
         img, label, fname, bbox = sess.run(self.next)
-        bbox = np.array(bbox)
+        # I don't know why but version 1.2 and 1.3 works differently
+        bbox = np.array(bbox).T
         yield img, label, fname, bbox
       except tf.errors.OutOfRangeError:
           break
