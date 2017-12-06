@@ -222,8 +222,7 @@ def make_cam(W, F, labels, multi_idxs, multi_sizes):
     cam += cam2[:, :, ::-1]
     mask += mask2[:, :, ::-1]
 
-    # cam /= mask
-    cam /= 10.0
+    cam /= mask
 
   return cam
 
