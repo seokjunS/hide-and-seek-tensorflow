@@ -77,7 +77,7 @@ def arg_parse(args):
   parser.add_argument(
       '--validation_interval',
       type=int,
-      default=1,
+      default=None,
       help='Interval of steps for logging.'
   )
   parser.add_argument(
@@ -231,6 +231,10 @@ def validation(model, sess, dataset):
 
 def main(sys_argv):
   FLAGS, rest_args = arg_parse(sys_argv)
+
+  ### pre-set
+  if FLAGS.validation_interval is None:
+    FLAGS.validation_interval =  int(NUM_CLASSES * NUM_TRAIN_PER_CLASS / FLAGS.batch_size)
   
   ### prepare directories
   mkdir(FLAGS.train_dir)
@@ -290,7 +294,7 @@ def main(sys_argv):
           # print('labels', labels)
 
         ### validation
-        if (step+1) % int(NUM_CLASSES * NUM_TRAIN_PER_CLASS / FLAGS.batch_size) == 0:
+        if (step+1) % FLAGS.validation_interval == 0:
           cnt_epoch += 1
           logging("[%s: INFO] %d epoch done!" % 
               (datetime.now(), cnt_epoch), FLAGS)

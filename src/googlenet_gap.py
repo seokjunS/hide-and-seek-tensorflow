@@ -1,7 +1,7 @@
 import tensorflow as tf
 from env import *
 import net_utils as net
-
+import numpy as np
 
 
 """
@@ -11,10 +11,14 @@ GooglenetGAP model
 class GooglenetGAP(object):
   def __init__(self,
                num_classes,
-               image_mean):
+               image_mean,
+               do_hide = None):
     self.num_classes = num_classes
-    self.image_mean = tf.reshape(tf.constant(image_mean), [1,1,1,3])
     self.l2_reg = 0.001
+    self.do_hide = do_hide
+    self.image_mean = np.array(image_mean).reshape((1, 1, 1, 3))
+
+    self.tf_image_mean =  tf.constant(image_mean, name='image_mean')
 
     # placeholders
     with tf.name_scope("Placeholders"):
@@ -32,13 +36,13 @@ class GooglenetGAP(object):
   def build(self):
     summaries = []
 
-    ### resize image
-    x = tf.image.resize_images(self.inputs, size=[GOOGLENET_IMAGE_WIDTH, GOOGLENET_IMAGE_HEIGHT])
-    # x: [batch, 224, 224, 3]
-
     ### normalize image
-    x = tf.subtract(x, self.image_mean)
+    x = tf.subtract(self.inputs, self.tf_image_mean)
     # summaries.append( tf.summary.histogram('norm_image', x) )
+
+    ### resize image
+    x = tf.image.resize_images(x, size=[GOOGLENET_IMAGE_WIDTH, GOOGLENET_IMAGE_HEIGHT])
+    # x: [batch, 224, 224, 3]
 
 
     ### CONV1: 7x7 / 2 [64]
@@ -194,8 +198,9 @@ class GooglenetGAP(object):
                            padding='SAME', 
                            is_training=self.is_training,
                            regularizer=None)
+      self.F = x
       # x: [batch, 14, 14, 1024]
-      summaries.append( tf.summary.histogram('conv_5', x) )
+      # summaries.append( tf.summary.histogram('conv_5', x) )
 
     ### GAP
     # [batch, 14, 14, 512] => [batch, 1024]
@@ -203,7 +208,7 @@ class GooglenetGAP(object):
       # x = tf.reduce_sum(x, axis=[1, 2])
       x = tf.reduce_mean(x, axis=[1, 2])
       # x: [batch, 1024]
-      summaries.append( tf.summary.histogram('gap', x) )
+      # summaries.append( tf.summary.histogram('gap', x) )
 
     ### softmax without bias
     with tf.variable_scope('softmax'):
@@ -237,6 +242,7 @@ class GooglenetGAP(object):
         self.train_op = optimizer.minimize( self.loss_op )
 
       self.score_op = tf.nn.softmax(self.logits)
+      
       self.pred_op = tf.argmax(self.logits, axis=1)
 
       self.hit_op = tf.reduce_sum( tf.cast( tf.equal( self.pred_op, self.labels ) , tf.float32) )
@@ -248,6 +254,14 @@ class GooglenetGAP(object):
 
 
   def train(self, sess, data, labels, learning_rate):
+    ### do hiding?
+    if self.do_hide is not None: # do_hide is num of grid
+      n, w, h, _ = data.shape
+      mask = net.gen_random_patch(shape=(n, w, h), N=self.do_hide)
+      mask = np.expand_dims(mask, axis=3)
+
+      data = data * mask + (1-mask) * self.image_mean
+
     _, loss, scores, hits, summary = sess.run(
       [self.train_op, self.loss_op, self.score_op, self.hit_op, self.summary_op],
       feed_dict={
@@ -273,13 +287,31 @@ class GooglenetGAP(object):
     return loss, hits, pred
 
 
-  def inference(self, sess, data):
-    pred = sess.run([self.pred_op], feed_dict={
+  def inference(self, sess, data, multi_crop=False):
+    if multi_crop:
+      raw_data = data
+      (crops, flip_crops), idxs, sizes = net.multi_crop(data, size=0.75)
+      data = np.concatenate( crops + flip_crops, axis=0 )
+      # print(raw_data.shape, data.shape)
+    else:
+      idxs = sizes = None
+
+    pred, score, W, F = sess.run([self.pred_op, self.score_op, self.W, self.F], feed_dict={
       self.inputs: data,
       self.is_training: False
     })
 
-    return pred
+    if multi_crop:
+      # print(score.shape)
+      num_n, num_classes = score.shape[0]/10, score.shape[1]
+      shape = (10, num_n, num_classes)
+      score = score.reshape(shape)
+      score = np.mean(score, axis=0)
+
+      pred = np.argmax(score, axis=1)
+
+
+    return pred, score, W, F, idxs, sizes
 
 
   def summary_valid_loss(self, sess, loss):

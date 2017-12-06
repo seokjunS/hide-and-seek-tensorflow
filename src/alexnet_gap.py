@@ -237,11 +237,6 @@ class AlexnetGAP(object):
 
 
   def inference(self, sess, data, multi_crop=False):
-    # pred, score, W, F = sess.run([self.pred_op, self.score_op, self.W, self.F], feed_dict={
-    #   self.inputs: data,
-    #   self.is_training: True
-    # })
-
     if multi_crop:
       raw_data = data
       (crops, flip_crops), idxs, sizes = net.multi_crop(data, size=0.75)
@@ -252,7 +247,7 @@ class AlexnetGAP(object):
 
     pred, score, W, F = sess.run([self.pred_op, self.score_op, self.W, self.F], feed_dict={
       self.inputs: data,
-      self.is_training: True
+      self.is_training: False
     })
 
     if multi_crop:
