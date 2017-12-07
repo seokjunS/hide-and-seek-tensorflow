@@ -13,6 +13,7 @@ from dataset import Dataset
 from alexnet_gap import *
 from googlenet_gap import *
 from customnet_gap import *
+from small_alexnet_gap import *
 
 
 """
@@ -92,6 +93,12 @@ def arg_parse(args):
       type=int,
       nargs='+',
       default=[],
+      help='Hide and Seek? If yes, number of grids.'
+  )
+  parser.add_argument(
+      '--without_resize',
+      type=bool,
+      default=False,
       help='Hide and Seek? If yes, number of grids.'
   )
 
@@ -182,7 +189,8 @@ def get_model(FLAGS):
   if FLAGS.method == 'AlexnetGAP':
     model = AlexnetGAP(num_classes=NUM_CLASSES,
                        image_mean=MEAN_IMAGE_RGB,
-                       do_hide=FLAGS.do_hide)
+                       do_hide=FLAGS.do_hide,
+                       without_resize=FLAGS.without_resize)
   elif FLAGS.method == 'GooglenetGAP':
     model = GooglenetGAP(num_classes=NUM_CLASSES,
                          image_mean=MEAN_IMAGE_RGB,
@@ -191,6 +199,10 @@ def get_model(FLAGS):
     model = CustomnetGAP(num_classes=NUM_CLASSES,
                          image_mean=MEAN_IMAGE_RGB,
                          do_hide=FLAGS.do_hide)
+  elif FLAGS.method == 'SmallAlexnetGAP':
+    model = SmallAlexnetGAP(num_classes=NUM_CLASSES,
+                       image_mean=MEAN_IMAGE_RGB,
+                       do_hide=FLAGS.do_hide)
   else:
     model = None
 

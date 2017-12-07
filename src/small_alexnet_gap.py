@@ -4,9 +4,28 @@ import net_utils as net
 import numpy as np
 
 
+"""
+AlexnetGAP model 
+"""
+"""
+Full (simplified) AlexNet architecture:
+[227x227x3] INPUT
+[55x55x96] CONV1: 96 11x11 filters at stride 4, pad 0
+[27x27x96] MAX POOL1: 3x3 filters at stride 2
+[27x27x96] NORM1: Normalization layer
+[27x27x256] CONV2: 256 5x5 filters at stride 1, pad 2
+[13x13x256] MAX POOL2: 3x3 filters at stride 2
+[13x13x256] NORM2: Normalization layer
+[13x13x384] CONV3: 384 3x3 filters at stride 1, pad 1
+[13x13x384] CONV4: 384 3x3 filters at stride 1, pad 1
+[13x13x256] CONV5: 256 3x3 filters at stride 1, pad 1
+[6x6x256] MAX POOL3: 3x3 filters at stride 2
+[4096] FC6: 4096 neurons
+[4096] FC7: 4096 neurons
+[1000] FC8: 1000 neurons (class scores)
+"""
 
-
-class CustomnetGAP(object):
+class SmallAlexnetGAP(object):
   def __init__(self,
                num_classes,
                image_mean,
@@ -20,7 +39,7 @@ class CustomnetGAP(object):
 
     # placeholders
     with tf.name_scope("Placeholders"):
-      self.inputs = tf.placeholder(tf.float32, shape=[None, None, None, 3], name='image')
+      self.inputs = tf.placeholder(tf.float32, shape=[None, IMAGE_WIDTH, IMAGE_HEIGHT, 3], name='image')
       self.labels = tf.placeholder(tf.int64, shape=[None], name='label')
       self.learning_rate = tf.placeholder(tf.float32, shape=(), name='lr')
       self.is_training = tf.placeholder(tf.bool, shape=(), name='is_training')
@@ -38,113 +57,91 @@ class CustomnetGAP(object):
     x = tf.subtract(self.inputs, self.tf_image_mean)
     # summaries.append( tf.summary.histogram('norm_image', x) )
 
-
-    ### resize image
-    x = tf.image.resize_images(x, size=[CUSTOMNET_IMAGE_WIDTH, CUSTOMNET_IMAGE_HEIGHT])
-    # x: [batch, 64, 64, 3]
-
-
-
     ### CONV1
+    # [55x55x96] CONV1: 96 11x11 filters at stride 4, pad 0
+    # [27x27x96] MAX POOL1: 3x3 filters at stride 2
     with tf.variable_scope('conv_1'):
       x = net.conv_relu_bn(x, 
-                           filter_shape=[3,3], 
+                           filter_shape=[5,5], 
                            num_filters=96, 
-                           stride=1, 
-                           padding='SAME', 
+                           stride=2, 
+                           padding='VALID', 
                            is_training=self.is_training,
-                           regularizer=None)
-      # x: [batch, 64, 64, 96]
+                           regularizer=tf.contrib.layers.l2_regularizer(scale=self.l2_reg))
+      # x: [batch, 30, 30, 96]
 
       x = tf.nn.max_pool(x,
-                         ksize=[1,2,2,1],
+                         ksize=[1,3,3,1],
                          strides=[1,2,2,1],
                          padding='SAME')
-      # x: [batch, 32, 32, 96]
+      # x: [batch, 15, 15, 96]
       # omit local response normalization. rather using BN
 
-    ### FIRE
-    with tf.variable_scope('fire2'):
-      x = net.fire( x,
-                    num_squeeze=16,
-                    num_1x1=64,
-                    num_3x3=64,
-                    is_training=self.is_training,
-                    regularizer=None)
-      # x: [batch, 32, 32, 128]
-
-    with tf.variable_scope('fire3'):
-      x = net.fire( x,
-                    num_squeeze=32,
-                    num_1x1=96,
-                    num_3x3=96,
-                    is_training=self.is_training,
-                    regularizer=None)
-      # x: [batch, 32, 32, 192]
+    ### CONV2
+    # [27x27x256] CONV2: 256 5x5 filters at stride 1, pad 2
+    # [13x13x256] MAX POOL2: 3x3 filters at stride 2
+    with tf.variable_scope('conv_2'):
+      x = net.conv_relu_bn(x, 
+                           filter_shape=[3,3], 
+                           num_filters=256, 
+                           stride=1, 
+                           padding='SAME',
+                           is_training=self.is_training,
+                           regularizer=tf.contrib.layers.l2_regularizer(scale=self.l2_reg))
+      # x: [batch, 15, 15, 256]
 
       x = tf.nn.max_pool(x,
-                         ksize=[1,2,2,1],
+                         ksize=[1,3,3,1],
                          strides=[1,2,2,1],
                          padding='SAME')
-      # x: [batch, 16, 16, 192]
+      # x: [batch, 8, 8, 256]
+      # omit local response normalization. rather using BN
 
-
-
-    with tf.variable_scope('fire4'):
-      x = net.fire( x,
-                    num_squeeze=32,
-                    num_1x1=128,
-                    num_3x3=128,
-                    is_training=self.is_training,
-                    regularizer=None)
-      # x: [batch, 16, 16, 256]
-
-      
-    with tf.variable_scope('fire5'):
-      x = net.fire( x,
-                    num_squeeze=48,
-                    num_1x1=160,
-                    num_3x3=160,
-                    is_training=self.is_training,
-                    regularizer=None)
-      # x: [batch, 16, 16, 320]
-
-    with tf.variable_scope('fire6'):
-      x = net.fire( x,
-                    num_squeeze=48,
-                    num_1x1=160,
-                    num_3x3=160,
-                    is_training=self.is_training,
-                    regularizer=None)
-      # x: [batch, 16, 16, 320]
-
-      x = tf.nn.max_pool(x,
-                         ksize=[1,2,2,1],
-                         strides=[1,2,2,1],
-                         padding='SAME')
-      # x: [batch, 8, 8, 320]
-
-    with tf.variable_scope('fire7'):
-      x = net.fire( x,
-                    num_squeeze=64,
-                    num_1x1=256,
-                    num_3x3=256,
-                    is_training=self.is_training,
-                    regularizer=None)
-      # x: [batch, 8, 8, 512]
+    ### CONV3 ~ 5
+    # [13x13x384] CONV3: 384 3x3 filters at stride 1, pad 1
+    # [13x13x384] CONV4: 384 3x3 filters at stride 1, pad 1
+    # [13x13x256] CONV5: 256 3x3 filters at stride 1, pad 1
+    with tf.variable_scope('conv_3'):
+      x = net.conv_relu_bn(x, 
+                           filter_shape=[3,3], 
+                           num_filters=384, 
+                           stride=1,
+                           padding='SAME', 
+                           is_training=self.is_training,
+                           regularizer=tf.contrib.layers.l2_regularizer(scale=self.l2_reg))
+      # x: [batch, 8, 8, 384]
+    with tf.variable_scope('conv_4'):
+      x = net.conv_relu_bn(x, 
+                           filter_shape=[3,3], 
+                           num_filters=384, 
+                           stride=1,
+                           padding='SAME', 
+                           is_training=self.is_training,
+                           regularizer=tf.contrib.layers.l2_regularizer(scale=self.l2_reg))
+      # x: [batch, 8, 8, 384]
+    with tf.variable_scope('conv_5'):
+      x = net.conv_relu_bn(x, 
+                           filter_shape=[3,3], 
+                           num_filters=256, 
+                           stride=1,
+                           padding='SAME', 
+                           is_training=self.is_training,
+                           regularizer=tf.contrib.layers.l2_regularizer(scale=self.l2_reg))
+      # x: [batch, 8, 8, 384]
     
     ### additional conv layer
     with tf.variable_scope('conv_6'):
       x = net.conv_relu_bn(x, 
                            filter_shape=[3,3], 
-                           num_filters=512,
+                           num_filters=512, 
                            stride=1,
                            padding='SAME', 
                            is_training=self.is_training,
-                           regularizer=None)
+                           regularizer=tf.contrib.layers.l2_regularizer(scale=self.l2_reg))
       self.F = x
       # x: [batch, 8, 8, 512]
       # summaries.append( tf.summary.histogram('conv_6', x) )
+      print(self.F)
 
     ### GAP
     # [batch, 8, 8, 512] => [batch, 512]

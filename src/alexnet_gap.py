@@ -29,10 +29,12 @@ class AlexnetGAP(object):
   def __init__(self,
                num_classes,
                image_mean,
-               do_hide = []):
+               do_hide = [],
+               without_resize=False):
     self.num_classes = num_classes
     self.l2_reg = 0.001
     self.do_hide = do_hide
+    self.without_resize = without_resize
     self.image_mean = np.array(image_mean).reshape((1, 1, 1, 3))
     
     self.tf_image_mean =  tf.constant(image_mean, name='image_mean')
@@ -60,8 +62,12 @@ class AlexnetGAP(object):
 
 
     ### resize image
-    x = tf.image.resize_images(x, size=[ALEXNET_IMAGE_WIDTH, ALEXNET_IMAGE_HEIGHT])
-    # x: [batch, 227, 227, 3]
+    if not self.without_resize:
+      x = tf.image.resize_images(x, size=[ALEXNET_IMAGE_WIDTH, ALEXNET_IMAGE_HEIGHT])
+      # x: [batch, 227, 227, 3]
+    # else:
+      # x: [batch, 64, 64, 3]
+      # at last conv => 2x2
 
 
 
