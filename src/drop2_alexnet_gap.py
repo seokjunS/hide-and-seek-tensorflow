@@ -2,42 +2,19 @@ import tensorflow as tf
 from env import *
 import net_utils as net
 import numpy as np
-from imgaug import augmenters as iaa
 
 
-"""
-AlexnetGAP model 
-"""
-"""
-Full (simplified) AlexNet architecture:
-[227x227x3] INPUT
-[55x55x96] CONV1: 96 11x11 filters at stride 4, pad 0
-[27x27x96] MAX POOL1: 3x3 filters at stride 2
-[27x27x96] NORM1: Normalization layer
-[27x27x256] CONV2: 256 5x5 filters at stride 1, pad 2
-[13x13x256] MAX POOL2: 3x3 filters at stride 2
-[13x13x256] NORM2: Normalization layer
-[13x13x384] CONV3: 384 3x3 filters at stride 1, pad 1
-[13x13x384] CONV4: 384 3x3 filters at stride 1, pad 1
-[13x13x256] CONV5: 256 3x3 filters at stride 1, pad 1
-[6x6x256] MAX POOL3: 3x3 filters at stride 2
-[4096] FC6: 4096 neurons
-[4096] FC7: 4096 neurons
-[1000] FC8: 1000 neurons (class scores)
-"""
 
-class AlexnetGAP(object):
+class Drop2AlexnetGAP(object):
   def __init__(self,
                num_classes,
                image_mean,
                do_hide = [],
-               without_resize=False,
-               do_augmentation=False):
+               without_resize=False):
     self.num_classes = num_classes
     self.l2_reg = 0.001
     self.do_hide = do_hide
     self.without_resize = without_resize
-    self.do_augmentation = do_augmentation
     self.image_mean = np.array(image_mean).reshape((1, 1, 1, 3))
     
     self.tf_image_mean =  tf.constant(image_mean, name='image_mean')
@@ -49,6 +26,7 @@ class AlexnetGAP(object):
       self.labels = tf.placeholder(tf.int64, shape=[None], name='label')
       self.learning_rate = tf.placeholder(tf.float32, shape=(), name='lr')
       self.is_training = tf.placeholder(tf.bool, shape=(), name='is_training')
+      self.keep_prob = tf.placeholder(tf.float32, shape=(), name='keep_prob')
 
       self.valid_loss = tf.placeholder(tf.float64, shape=())
 
@@ -59,8 +37,17 @@ class AlexnetGAP(object):
   def build(self):
     summaries = []
 
+    ### dropout here
+    with tf.variable_scope('dropout'):
+      x_shape = tf.shape(self.inputs)
+      x_shape = x_shape * tf.constant([1, 1, 1, 0]) + tf.constant([0, 0, 0, 1])
+      # batch, w, h, 1
+      x = tf.nn.dropout(self.inputs,
+                        keep_prob=self.keep_prob,
+                        noise_shape=x_shape)
+
     ### normalize image
-    x = tf.subtract(self.inputs, self.tf_image_mean)
+    x = tf.subtract(x, self.tf_image_mean)
     # summaries.append( tf.summary.histogram('norm_image', x) )
 
 
@@ -225,44 +212,14 @@ class AlexnetGAP(object):
 
         data = data * mask + (1-mask) * self.image_mean
 
-    ### do augmentation?
-    if self.do_augmentation == 1:
-      data = iaa.Sequential([
-        iaa.Fliplr(0.25),
-        iaa.Flipud(0.25),
-        iaa.Sometimes(0.25, iaa.Affine(
-          rotate=(-180, 180)
-        )),
-        iaa.Sometimes(0.2, iaa.Affine(
-          translate_percent={'x': (-0.15, 0.15), 'y': (-0.15, 0.15)}
-        ))
-      ]).augment_images(data)
-    elif self.do_augmentation == 2:
-      data = iaa.Sequential([
-        iaa.Fliplr(0.25),
-        iaa.Flipud(0.25),
-        iaa.Sometimes(0.25, iaa.Affine(
-          rotate=(-180, 180)
-        )),
-        iaa.Sometimes(0.2, iaa.Affine(
-          translate_percent={'x': (-0.1, 0.1), 'y': (-0.1, 0.1)}
-        )),
-        iaa.Sometimes(0.2, iaa.OneOf([
-          iaa.CoarseDropout(0.2, size_percent=(0.05, 0.1)),
-          iaa.CoarseSalt(0.2, size_percent=(0.05, 0.1)),
-          iaa.CoarsePepper(0.2, size_percent=(0.05, 0.1)),
-          iaa.CoarseSaltAndPepper(0.2, size_percent=(0.05, 0.1))
-        ]))
-      ]).augment_images(data)
-
-
     _, loss, scores, hits, summary = sess.run(
       [self.train_op, self.loss_op, self.score_op, self.hit_op, self.summary_op],
       feed_dict={
         self.inputs: data,
         self.labels: labels,
         self.learning_rate: learning_rate,
-        self.is_training: True
+        self.is_training: True,
+        self.keep_prob: 0.5
     })
 
     return loss, scores, hits, summary
@@ -275,7 +232,8 @@ class AlexnetGAP(object):
       feed_dict={
         self.inputs: data,
         self.labels: labels,
-        self.is_training: False
+        self.is_training: False,
+        self.keep_prob: 1.0
     })
 
     return loss, hits, pred
@@ -292,7 +250,8 @@ class AlexnetGAP(object):
 
     pred, score, W, F = sess.run([self.pred_op, self.score_op, self.W, self.F], feed_dict={
       self.inputs: data,
-      self.is_training: False
+      self.is_training: False,
+      self.keep_prob: 1.0
     })
 
     if multi_crop:

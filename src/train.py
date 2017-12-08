@@ -14,6 +14,8 @@ from alexnet_gap import *
 from googlenet_gap import *
 from customnet_gap import *
 from small_alexnet_gap import *
+from drop_alexnet_gap import *
+from drop2_alexnet_gap import *
 
 
 """
@@ -99,6 +101,12 @@ def arg_parse(args):
       '--without_resize',
       type=bool,
       default=False,
+      help='Hide and Seek? If yes, number of grids.'
+  )
+  parser.add_argument(
+      '--do_augmentation',
+      type=int,
+      default=-1,
       help='Hide and Seek? If yes, number of grids.'
   )
 
@@ -190,7 +198,8 @@ def get_model(FLAGS):
     model = AlexnetGAP(num_classes=NUM_CLASSES,
                        image_mean=MEAN_IMAGE_RGB,
                        do_hide=FLAGS.do_hide,
-                       without_resize=FLAGS.without_resize)
+                       without_resize=FLAGS.without_resize,
+                       do_augmentation=FLAGS.do_augmentation)
   elif FLAGS.method == 'GooglenetGAP':
     model = GooglenetGAP(num_classes=NUM_CLASSES,
                          image_mean=MEAN_IMAGE_RGB,
@@ -203,11 +212,20 @@ def get_model(FLAGS):
     model = SmallAlexnetGAP(num_classes=NUM_CLASSES,
                        image_mean=MEAN_IMAGE_RGB,
                        do_hide=FLAGS.do_hide)
+  elif FLAGS.method == 'DropAlexnetGAP':
+    model = DropAlexnetGAP(num_classes=NUM_CLASSES,
+                           image_mean=MEAN_IMAGE_RGB,
+                           do_hide=FLAGS.do_hide)
+  elif FLAGS.method == 'Drop2AlexnetGAP':
+    model = Drop2AlexnetGAP(num_classes=NUM_CLASSES,
+                           image_mean=MEAN_IMAGE_RGB,
+                           do_hide=FLAGS.do_hide)
   else:
     model = None
 
   s = "[%s: INFO] %s with Hide: %s" % \
                 (datetime.now(), FLAGS.method, str(len(FLAGS.do_hide) > 0))
+
   if hasattr(FLAGS, 'log_dir'):
     logging(s, FLAGS)
   else:

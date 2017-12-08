@@ -2,42 +2,19 @@ import tensorflow as tf
 from env import *
 import net_utils as net
 import numpy as np
-from imgaug import augmenters as iaa
 
 
-"""
-AlexnetGAP model 
-"""
-"""
-Full (simplified) AlexNet architecture:
-[227x227x3] INPUT
-[55x55x96] CONV1: 96 11x11 filters at stride 4, pad 0
-[27x27x96] MAX POOL1: 3x3 filters at stride 2
-[27x27x96] NORM1: Normalization layer
-[27x27x256] CONV2: 256 5x5 filters at stride 1, pad 2
-[13x13x256] MAX POOL2: 3x3 filters at stride 2
-[13x13x256] NORM2: Normalization layer
-[13x13x384] CONV3: 384 3x3 filters at stride 1, pad 1
-[13x13x384] CONV4: 384 3x3 filters at stride 1, pad 1
-[13x13x256] CONV5: 256 3x3 filters at stride 1, pad 1
-[6x6x256] MAX POOL3: 3x3 filters at stride 2
-[4096] FC6: 4096 neurons
-[4096] FC7: 4096 neurons
-[1000] FC8: 1000 neurons (class scores)
-"""
 
-class AlexnetGAP(object):
+class AlexnetGMP(object):
   def __init__(self,
                num_classes,
                image_mean,
                do_hide = [],
-               without_resize=False,
-               do_augmentation=False):
+               without_resize=False):
     self.num_classes = num_classes
     self.l2_reg = 0.001
     self.do_hide = do_hide
     self.without_resize = without_resize
-    self.do_augmentation = do_augmentation
     self.image_mean = np.array(image_mean).reshape((1, 1, 1, 3))
     
     self.tf_image_mean =  tf.constant(image_mean, name='image_mean')
@@ -164,7 +141,7 @@ class AlexnetGAP(object):
     # [batch, 13, 13, 512] => [batch, 512]
     with tf.variable_scope('gap'):
       # x = tf.reduce_sum(x, axis=[1, 2])
-      x = tf.reduce_mean(x, axis=[1, 2])
+      x = tf.reduce_max(x, axis=[1, 2])
       # x: [batch, 512]
       # summaries.append( tf.summary.histogram('gap', x) )
 
@@ -224,37 +201,6 @@ class AlexnetGAP(object):
         mask = np.expand_dims(mask, axis=3)
 
         data = data * mask + (1-mask) * self.image_mean
-
-    ### do augmentation?
-    if self.do_augmentation == 1:
-      data = iaa.Sequential([
-        iaa.Fliplr(0.25),
-        iaa.Flipud(0.25),
-        iaa.Sometimes(0.25, iaa.Affine(
-          rotate=(-180, 180)
-        )),
-        iaa.Sometimes(0.2, iaa.Affine(
-          translate_percent={'x': (-0.15, 0.15), 'y': (-0.15, 0.15)}
-        ))
-      ]).augment_images(data)
-    elif self.do_augmentation == 2:
-      data = iaa.Sequential([
-        iaa.Fliplr(0.25),
-        iaa.Flipud(0.25),
-        iaa.Sometimes(0.25, iaa.Affine(
-          rotate=(-180, 180)
-        )),
-        iaa.Sometimes(0.2, iaa.Affine(
-          translate_percent={'x': (-0.1, 0.1), 'y': (-0.1, 0.1)}
-        )),
-        iaa.Sometimes(0.2, iaa.OneOf([
-          iaa.CoarseDropout(0.2, size_percent=(0.05, 0.1)),
-          iaa.CoarseSalt(0.2, size_percent=(0.05, 0.1)),
-          iaa.CoarsePepper(0.2, size_percent=(0.05, 0.1)),
-          iaa.CoarseSaltAndPepper(0.2, size_percent=(0.05, 0.1))
-        ]))
-      ]).augment_images(data)
-
 
     _, loss, scores, hits, summary = sess.run(
       [self.train_op, self.loss_op, self.score_op, self.hit_op, self.summary_op],

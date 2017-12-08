@@ -66,6 +66,8 @@ class Dataset:
 
 
 
+
+
 """
 Aux
 calculate mean of all images
