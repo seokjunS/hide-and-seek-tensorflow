@@ -71,6 +71,18 @@ def arg_parse(args):
       default=False,
       help=''
   )
+  parser.add_argument(
+      '--without_resize',
+      type=bool,
+      default=False,
+      help='Hide and Seek? If yes, number of grids.'
+  )
+  parser.add_argument(
+      '--do_augmentation',
+      type=int,
+      default=-1,
+      help='Hide and Seek? If yes, number of grids.'
+  )
 
 
 

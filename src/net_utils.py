@@ -153,6 +153,34 @@ def fire(inputs,
   return x
 
 
+def compress(inputs,
+              num_1x1,
+              num_3x3,
+              is_training,
+              padding='VALID',
+              regularizer=None):
+  with tf.variable_scope('conv_1x1'):
+    x = conv_relu_bn(inputs, 
+                    filter_shape=[1,1], 
+                    num_filters=num_1x1, 
+                    stride=1,
+                    padding=padding, 
+                    is_training=is_training,
+                    regularizer=regularizer)
+  with tf.variable_scope('conv_3x3'):
+    x = conv_relu_bn(x, 
+                    filter_shape=[3,3], 
+                    num_filters=num_3x3, 
+                    stride=1,
+                    padding=padding, 
+                    is_training=is_training,
+                    regularizer=regularizer)
+
+  return x
+
+
+
+
 def multi_crop(data, size=0.75):
   ### do 10 crops
   n, w, h, c = data.shape

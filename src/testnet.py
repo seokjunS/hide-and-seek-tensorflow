@@ -5,28 +5,8 @@ import numpy as np
 from imgaug import augmenters as iaa
 
 
-"""
-AlexnetGAP model 
-"""
-"""
-Full (simplified) AlexNet architecture:
-[227x227x3] INPUT
-[55x55x96] CONV1: 96 11x11 filters at stride 4, pad 0
-[27x27x96] MAX POOL1: 3x3 filters at stride 2
-[27x27x96] NORM1: Normalization layer
-[27x27x256] CONV2: 256 5x5 filters at stride 1, pad 2
-[13x13x256] MAX POOL2: 3x3 filters at stride 2
-[13x13x256] NORM2: Normalization layer
-[13x13x384] CONV3: 384 3x3 filters at stride 1, pad 1
-[13x13x384] CONV4: 384 3x3 filters at stride 1, pad 1
-[13x13x256] CONV5: 256 3x3 filters at stride 1, pad 1
-[6x6x256] MAX POOL3: 3x3 filters at stride 2
-[4096] FC6: 4096 neurons
-[4096] FC7: 4096 neurons
-[1000] FC8: 1000 neurons (class scores)
-"""
 
-class AlexnetGAP(object):
+class Testnet(object):
   def __init__(self,
                num_classes,
                image_mean,
@@ -149,25 +129,62 @@ class AlexnetGAP(object):
     
     ### additional conv layer
     with tf.variable_scope('conv_6'):
-      x = net.conv_relu_bn(x, 
-                           filter_shape=[3,3], 
-                           num_filters=512, 
-                           stride=1,
-                           padding='SAME', 
-                           is_training=self.is_training,
-                           regularizer=tf.contrib.layers.l2_regularizer(scale=self.l2_reg))
+      x = net.compress(x,
+                       num_1x1=256,
+                       num_3x3=256, 
+                       is_training=self.is_training,
+                       padding='SAME',
+                       regularizer=tf.contrib.layers.l2_regularizer(scale=self.l2_reg))
       self.F = x
-      # x: [batch, 13, 13, 512]
-      # summaries.append( tf.summary.histogram('conv_6', x) )
-      print(self.F)
+      self.auxs.append(x)
+      # x: [batch, 13, 13, 256]
+
+
+    ### additional conv layer
+    with tf.variable_scope('conv_7'):
+      x = net.compress(x,
+                       num_1x1=128,
+                       num_3x3=128, 
+                       is_training=self.is_training,
+                       padding='VALID',
+                       regularizer=tf.contrib.layers.l2_regularizer(scale=self.l2_reg))
+      self.auxs.append(x)
+      # x: [batch, 11, 11, 128]
+
+
+    ### additional conv layer
+    with tf.variable_scope('conv_8'):
+      x = net.compress(x,
+                       num_1x1=128,
+                       num_3x3=128, 
+                       is_training=self.is_training,
+                       padding='VALID',
+                       regularizer=tf.contrib.layers.l2_regularizer(scale=self.l2_reg))
+      self.auxs.append(x)
+      # x: [batch, 9, 9, 128]
+
+    ### additional conv layer
+    with tf.variable_scope('conv_9'):
+      x = net.compress(x,
+                       num_1x1=128,
+                       num_3x3=128, 
+                       is_training=self.is_training,
+                       padding='VALID',
+                       regularizer=tf.contrib.layers.l2_regularizer(scale=self.l2_reg))
+      self.auxs.append(x)
+      # x: [batch, 7, 7, 128]
+
+
 
     ### GAP
-    # [batch, 13, 13, 512] => [batch, 512]
+    # [batch, 13, 13, 640] => [batch, 640]
     with tf.variable_scope('gap'):
-      # x = tf.reduce_sum(x, axis=[1, 2])
-      x = tf.reduce_mean(x, axis=[1, 2])
-      # x: [batch, 512]
-      # summaries.append( tf.summary.histogram('gap', x) )
+      gaps = []
+      for f in self.auxs:
+        gaps.append( tf.reduce_mean(x, [1, 2]) )
+
+      x = tf.concat(values=gaps, axis=-1)
+
 
     ### softmax without bias
     with tf.variable_scope('softmax'):
@@ -291,7 +308,7 @@ class AlexnetGAP(object):
     else:
       idxs = sizes = None
 
-    pred, score, W, F = sess.run([self.pred_op, self.score_op, self.W, self.F], feed_dict={
+    pred, score, W, F, auxs = sess.run([self.pred_op, self.score_op, self.W, self.F, self.auxs], feed_dict={
       self.inputs: data,
       self.is_training: False
     })
@@ -306,7 +323,7 @@ class AlexnetGAP(object):
       pred = np.argmax(score, axis=1)
 
 
-    return pred, score, W, F, idxs, sizes
+    return pred, score, W, F, auxs, idxs, sizes
 
 
   def summary_valid_loss(self, sess, loss):

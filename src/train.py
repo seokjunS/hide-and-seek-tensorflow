@@ -18,6 +18,8 @@ from alexnet_gmp import *
 from drop_alexnet_gap import *
 from drop2_alexnet_gap import *
 
+from testnet import *
+
 
 """
 Set parameters
@@ -226,6 +228,13 @@ def get_model(FLAGS):
     model = Drop2AlexnetGAP(num_classes=NUM_CLASSES,
                            image_mean=MEAN_IMAGE_RGB,
                            do_hide=FLAGS.do_hide)
+
+  elif FLAGS.method == 'Testnet':
+    model = Testnet(num_classes=NUM_CLASSES,
+                       image_mean=MEAN_IMAGE_RGB,
+                       do_hide=FLAGS.do_hide,
+                       without_resize=FLAGS.without_resize,
+                       do_augmentation=FLAGS.do_augmentation)
   else:
     model = None
 
