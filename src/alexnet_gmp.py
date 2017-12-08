@@ -139,11 +139,11 @@ class AlexnetGMP(object):
 
     ### GAP
     # [batch, 13, 13, 512] => [batch, 512]
-    with tf.variable_scope('gap'):
+    with tf.variable_scope('gmp'):
       # x = tf.reduce_sum(x, axis=[1, 2])
       x = tf.reduce_max(x, axis=[1, 2])
       # x: [batch, 512]
-      # summaries.append( tf.summary.histogram('gap', x) )
+
 
     ### softmax without bias
     with tf.variable_scope('softmax'):

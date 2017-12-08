@@ -14,6 +14,7 @@ from alexnet_gap import *
 from googlenet_gap import *
 from customnet_gap import *
 from small_alexnet_gap import *
+from alexnet_gmp import *
 from drop_alexnet_gap import *
 from drop2_alexnet_gap import *
 
@@ -212,6 +213,11 @@ def get_model(FLAGS):
     model = SmallAlexnetGAP(num_classes=NUM_CLASSES,
                        image_mean=MEAN_IMAGE_RGB,
                        do_hide=FLAGS.do_hide)
+  elif FLAGS.method == 'AlexnetGMP':
+    model = AlexnetGMP(num_classes=NUM_CLASSES,
+                       image_mean=MEAN_IMAGE_RGB,
+                       do_hide=FLAGS.do_hide,
+                       without_resize=FLAGS.without_resize)
   elif FLAGS.method == 'DropAlexnetGAP':
     model = DropAlexnetGAP(num_classes=NUM_CLASSES,
                            image_mean=MEAN_IMAGE_RGB,
