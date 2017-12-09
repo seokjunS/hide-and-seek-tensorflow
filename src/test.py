@@ -56,7 +56,7 @@ def arg_parse(args):
   parser.add_argument(
       '--do_hide',
       type=int,
-      default=None,
+      default=[],
       help='Hide and Seek? If yes, number of grids.'
   )
   parser.add_argument(
@@ -82,6 +82,12 @@ def arg_parse(args):
       type=int,
       default=-1,
       help='Hide and Seek? If yes, number of grids.'
+  )
+  parser.add_argument(
+      '--output',
+      type=str,
+      default='',
+      help='Path of file.'
   )
 
 
@@ -379,7 +385,8 @@ def visualize_result(sidx, cam, iou, true_bbox, pred_bbox, label, prob, fname):
                           linewidth=4 )
     )
     # pred box
-    xmin, ymin, xmax, ymax = pred_bbox_
+    # xmin, ymin, xmax, ymax = pred_bbox_
+    xmin, ymin, xmax, ymax = 0, 0, 63, 63
     ax4.add_patch(
       patches.Rectangle( (xmin,ymin), (xmax-xmin), (ymax-ymin),
                           fill=False,
@@ -422,8 +429,8 @@ def visualize_result(sidx, cam, iou, true_bbox, pred_bbox, label, prob, fname):
 
 
     plt.tight_layout()
-    # plt.show()
-    plt.savefig('tmp/%s' % (fname_))
+    plt.show()
+    # plt.savefig('tmp/%s' % (fname_))
     plt.close()    
 
     # plt.savefig('tmp/%d.png' % i)
@@ -434,10 +441,8 @@ def visualize_result(sidx, cam, iou, true_bbox, pred_bbox, label, prob, fname):
 
 
 
-def main(sys_argv):
-  FLAGS, rest_args = arg_parse(sys_argv)
+def main(FLAGS):
 
-  
   print("[%s: INFO] Start Evaluation: %s" %
     (datetime.now(), str(FLAGS)))
 
@@ -479,7 +484,11 @@ def main(sys_argv):
         print("---------------------")
 
 
-      # inference(model, sess, valid_set, localization_thres=0.2, vis_thres=0.9)
+      # inference(model, sess, valid_set, 
+      #           localization_thres=0.3, 
+      #           vis_thres=0.9, 
+      #           multi_crop=False,
+      #           do_vis=False)
       # print("---------------------")
       # inference(model, sess, valid_set, localization_thres=0.3, vis_thres=0.9)
       # print("---------------------")
@@ -498,6 +507,58 @@ def main(sys_argv):
 
 
 
+def write(FLAGS):
+  with open(FLAGS.output, 'w') as fw:
+    fw.write("[%s: INFO] Start Evaluation: %s\n" %
+              (datetime.now(), str(FLAGS)))
+
+
+    with tf.Graph().as_default():
+      valid_set = Dataset(FLAGS.valid_file,
+                          num_data=NUM_CLASSES*NUM_TEST_PER_CLASS,
+                           batch_size=FLAGS.batch_size,
+                          for_training=False)
+
+      model = get_model(FLAGS)
+
+      with tf.Session() as sess:
+        saver = tf.train.Saver()
+
+        # validity of checkpoint
+        if not tf.train.checkpoint_exists( FLAGS.checkpoint ):
+          fw.write("[%s: ERROR] Checkpoint does not exist! : %s\n" %
+            (datetime.now(), FLAGS.checkpoint))
+          return
+
+        saver.restore( sess, FLAGS.checkpoint )
+
+        ### test!
+        for thres in [0.2, 0.3, 0.4, 0.5]:
+          fw.write("localization_thres: %.2f\n" % thres)
+          top_1_loc, gt_known_loc, top_1_class = inference(model, sess, valid_set, 
+                                                    localization_thres=thres, 
+                                                    vis_thres=0.9, 
+                                                    multi_crop=FLAGS.do_multi_crop, 
+                                                    do_vis=FLAGS.do_vis)
+          fw.write("Top-1 Loc: %.4f, GT-known Loc: %.4f, Top-l Clas: %.4f\n" %
+                  (top_1_loc, gt_known_loc, top_1_class))
+          fw.write("---------------------\n")
+
+
+    fw.write("[%s: INFO] Done" %
+      (datetime.now()))
+
+
+
+
+
+
+
 if __name__ == '__main__':
   args = sys.argv[1:]
-  main(args)
+  FLAGS, rest_args = arg_parse(args)
+  
+  if len(FLAGS.output) > 0:
+    write(FLAGS)
+  else:
+    main(FLAGS)
