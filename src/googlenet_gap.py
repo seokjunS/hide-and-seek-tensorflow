@@ -22,7 +22,7 @@ class GooglenetGAP(object):
 
     # placeholders
     with tf.name_scope("Placeholders"):
-      self.inputs = tf.placeholder(tf.float32, shape=[None, IMAGE_WIDTH, IMAGE_HEIGHT, 3], name='image')
+      self.inputs = tf.placeholder(tf.float32, shape=[None, None, None, 3], name='image')
       self.labels = tf.placeholder(tf.int64, shape=[None], name='label')
       self.learning_rate = tf.placeholder(tf.float32, shape=(), name='lr')
       self.is_training = tf.placeholder(tf.bool, shape=(), name='is_training')
