@@ -218,6 +218,7 @@ class GooglenetGAP(object):
                   initializer=tf.contrib.layers.xavier_initializer(),
                   regularizer=None)
 
+      self.W = weights
       self.logits = tf.matmul(x, weights)
       # logits: [batch, num_classes]
 
