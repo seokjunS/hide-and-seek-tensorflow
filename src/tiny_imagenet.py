@@ -208,7 +208,6 @@ def get_valid_image(fname):
 if __name__ == '__main__':
   # gen_data()
   # read_tfrecord(VALID_TFRECORD)
-  
-  print(sys.argv)
+
   if len(sys.argv) > 1:
     locals()[sys.argv[1]]()
